@@ -50,7 +50,7 @@ limits <- aes(x=agesero,ymax = exp(survival.fit + survival.se.fit), ymin=exp(sur
     theme(axis.text.x = element_text(angle = 60, hjust = 1,size=12))+
     facet_grid(. ~event_num)+labs(spvl='custom title')
   
-  source('vectorize/multiplot.R')
+  source('multiplot.R')
 
   return(multiplot(plot.surface,plot.agesero,cols=2,maintitle = title))
 }
