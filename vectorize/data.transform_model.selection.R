@@ -3,6 +3,8 @@
 ## Description: Survival model coupling nonlinear viral load progression with informative censoring
 ##              based events.
 ## Output: TODO
+##
+## Run from within the "vectorize" folder!
 ####################################################################################################
 
 rm(list=ls())
@@ -12,12 +14,9 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-#setwd("C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/code/")
-setwd("C:/Users/cselinger/Dropbox (IDM)/viral_loadNew/cascade/code")
-
-parent_dir <- "../data/"
-
-
+#eventually, main_dir will be fed as an argument into this function.
+main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
+#TODO: add Christian's filepath back in
 
 ##################################################
 ## I. Define a function that runs the model, 
@@ -65,14 +64,19 @@ gm_mean = function(x, na.rm=TRUE){
 ################################
 ## II. Read in data
 #################################
-print("importing viral load data")
-vl <- fread(paste0(parent_dir, "vl.csv")) #column 'time' corresponds to 'visit_time' in  alldata.rdata 
-surv <- fread(paste0(parent_dir, "surv.csv")) #column 'AD' corresponds to 'aids_death_indic', 'ADtime' to 'event_time' in alldata.rdata
-orig_surv <- copy(surv) #keep a copy with original AD and ADtime values for plotting
+print("importing data")
+load(paste0(main_dir, "alldata.rdata"))
 
-# ggplot(surv, aes(x=event_timeNew)) +
-#   geom_histogram() +
-#   facet_wrap(~event_type, scales="free_y")
+#generate viral load dataset
+vl <- alldata[,list(patient_id, time=visit_time, vl, assay_ll, assay_type)]
+
+#generate survival dataset
+surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
+setkeyv(surv, NULL)
+surv <- unique(surv)
+
+orig_surv <- copy(surv) #keep a copy with original AD and ADtime values for plotting
+rm(alldata)
 
 #################################################################
 ## III. Format Viral Load Data:
@@ -132,8 +136,7 @@ index.data.transform=expand.grid(upper_bound=c(seq(3.2,4,0.5),999),
 
 run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
 
-source("vectorize/data.transform.R")
-
+source("data.transform.R")
 
 data.for.survival<-mapply(data.transform,
                           upper_bound=index.data.transform$upper_bound,
@@ -147,12 +150,9 @@ colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,col
 
 #names(out)<-paste0('imputed_data: ',"upper bound=", upper_bound," | debias=", debias," | impute_type=",impute_type,"| impute.with.aids=", impute.with.aids," || imputation_number=",1:imputation_count)
 
-
-
 ############################################################################################################
 ## loop over survival models, per data transform and multiple imputations
 ##############################################################################################################
-
 
 index.survival.models<-expand.grid(
                             spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
@@ -161,8 +161,7 @@ index.survival.models<-expand.grid(
 
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
 
-
-source("vectorize/LinearSurvivalModel.R")
+source("LinearSurvivalModel.R")
 
 survival.model.output<-list()
 for (k in 1:length(data.for.survival)){
@@ -173,8 +172,11 @@ for (k in 1:length(data.for.survival)){
           bins=index.survival.models$bins)
 }
 
+#save regression outputs for cross-validation
+save(survival.model.output, file=paste0(main_dir, "survival_model_output.rdata"))
+
 ##Rubins's method for multiple imputations
-source("vectorize/rubin.method.R")
+source("rubin.method.R")
 rubin.method.error<-rubin.method(survival.model.output,imputation_count=3,output.type = 'error')
 mean.rubin.method.error<-lapply(rubin.method.error,function(x)rowMeans(x))
 
@@ -182,7 +184,7 @@ mean.rubin.method.error<-lapply(rubin.method.error,function(x)rowMeans(x))
 ## modelselection per data transformation
 ##############################################################################################################
 
-source("vectorize/output.AIC.R")
+source("output.AIC.R")
 AIC<-output.AIC(survival.model.output,imputation_count=3)
 minAIC<-lapply(AIC,function(x)order(x,decreasing=FALSE)[1])
 
@@ -195,7 +197,6 @@ A<-sapply(1:nrow(index.survival.models),function(k) {order(sapply(meanAIC,functi
 modelselection<-data.table(data.transform=1:length(run),bestmodel=A)
 modelselection[,min.Rubin.error:=
                  order(mapply(function(x,k){mean.rubin.method.error[[x]][[k]]},modelselection$bestmodel,modelselection$data.transform))[1]]
-
 
 ##results: best model with smallest imputation error average
 modelnames<-apply(index.survival.models,1,function(x) paste0(x,collapse="-"))
@@ -210,52 +211,53 @@ print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
 
 # relativeAIC<-lapply(survival.model.output,function(x) exp((min(unlist(x[2,]))-unlist(x[2,]))/2))
 
-#########################
-####PLOTS
-
-data=data.for.survival[modelselection$bestmodel.min.Rubin.error[1]][[1]]
-bestmodel<-LinearSurvivalModel(return.modelobject=1,
-                    spvl_method=index.survival.models$spvl_method[modelselection$min.Rubin.error[1]],
-                    interaction=index.survival.models$interaction[modelselection$min.Rubin.error[1]],
-                    bins=index.survival.models$bins[modelselection$min.Rubin.error[1]])
-
-
-###FIGURE 3b
-source("vectorize/plot.survival.R")
-
-plot.survival(bestmodel,modelnames[modelselection$min.Rubin.error[1]],'title')
-
-###FIGURE 3c
-source("vectorize/plot.modelcurve.R")
-plot.modelcurve(bestmodel,modelnames[modelselection$min.Rubin.error[1]],'title')
-
-
-
-source('c:/Users/cselinger/TOOLS/multiplot.R')
-plots<-lapply(1:length(bestmodel.names),function(x) plot.modelcurve(bestmodel[[x]],bestmodel.names[[x]],names(bestmodel.index)[x]))
-
-png('vectorize/modelcurve.png',width=45, height=45, units='cm', res=400)
-multiplot(plotlist=plots,cols=4)
-dev.off()
-
-
-###FIGURE 2a
-source("vectorize/plot.spvlagesero.R")
-plot.spvlagesero(bestmodel,modelnames[modelselection$min.Rubin.error[1]],'title')
-
-
-plots<-lapply(1:length(bestmodel.names),function(x) plot.spvlagesero(bestmodel[[x]],bestmodel.names[[x]],'Set point viral load and age at seroconversion'))
-
-png('vectorize/spvlagesero.png',width=45, height=45, units='cm', res=400)
-multiplot(plotlist=plots,cols=4)
-dev.off()
-
-
-###FIGURE 2b
-prop.na.spvl_model<-as.data.frame(table(substring(data_orig[[16]][is.na(spvl_model)]$patient_id, 1, 3))/table(substring(data_orig[[16]]$patient_id, 1, 3)))
-
-ggplot(prop.na.spvl_model)+
-  geom_bar(aes(x=Var1,y=Freq,group=Var1,fill=Var1),stat='identity')+
-  theme(legend.position = "none")+
-  labs(x="cohort", y="fraction",title="Negative set point viral load slope")
+#don't worry about plots for a minute
+# #########################
+# ####PLOTS
+# 
+# data=data.for.survival[modelselection$bestmodel.min.Rubin.error[1]][[1]]
+# bestmodel<-LinearSurvivalModel(return.modelobject=1,
+#                     spvl_method=index.survival.models$spvl_method[modelselection$min.Rubin.error[1]],
+#                     interaction=index.survival.models$interaction[modelselection$min.Rubin.error[1]],
+#                     bins=index.survival.models$bins[modelselection$min.Rubin.error[1]])
+# 
+# 
+# ###FIGURE 3b
+# source("vectorize/plot.survival.R")
+# 
+# plot.survival(bestmodel,modelnames[modelselection$min.Rubin.error[1]],'title')
+# 
+# ###FIGURE 3c
+# source("vectorize/plot.modelcurve.R")
+# plot.modelcurve(bestmodel,modelnames[modelselection$min.Rubin.error[1]],'title')
+# 
+# 
+# 
+# source('c:/Users/cselinger/TOOLS/multiplot.R')
+# plots<-lapply(1:length(bestmodel.names),function(x) plot.modelcurve(bestmodel[[x]],bestmodel.names[[x]],names(bestmodel.index)[x]))
+# 
+# png('vectorize/modelcurve.png',width=45, height=45, units='cm', res=400)
+# multiplot(plotlist=plots,cols=4)
+# dev.off()
+# 
+# 
+# ###FIGURE 2a
+# source("vectorize/plot.spvlagesero.R")
+# plot.spvlagesero(bestmodel,modelnames[modelselection$min.Rubin.error[1]],'title')
+# 
+# 
+# plots<-lapply(1:length(bestmodel.names),function(x) plot.spvlagesero(bestmodel[[x]],bestmodel.names[[x]],'Set point viral load and age at seroconversion'))
+# 
+# png('vectorize/spvlagesero.png',width=45, height=45, units='cm', res=400)
+# multiplot(plotlist=plots,cols=4)
+# dev.off()
+# 
+# 
+# ###FIGURE 2b
+# prop.na.spvl_model<-as.data.frame(table(substring(data_orig[[16]][is.na(spvl_model)]$patient_id, 1, 3))/table(substring(data_orig[[16]]$patient_id, 1, 3)))
+# 
+# ggplot(prop.na.spvl_model)+
+#   geom_bar(aes(x=Var1,y=Freq,group=Var1,fill=Var1),stat='identity')+
+#   theme(legend.position = "none")+
+#   labs(x="cohort", y="fraction",title="Negative set point viral load slope")
 

@@ -8,11 +8,8 @@
 
 #function to generate imputations based on the upper bounds and imputation count desired
 
-impute <- function(upper_bound, imputation_count){
-  #read in data
-  print("importing data")
-  load(paste0("vectorize/", "impute_data.rdata"))
-  
+impute <- function(to_impute, upper_bound, imputation_count){
+
     #no bounds on anything or bounded imputation
     if (upper_bound>10){
     imputed_data <- amelia(x=to_impute,cs='patient_id', m=imputation_count,p2s=0)
@@ -32,10 +29,6 @@ impute <- function(upper_bound, imputation_count){
       imputed_data <- amelia(x=to_impute,cs='patient_id', priors=surv_bds, m=imputation_count,p2s=0)
     }
 
-
-
-  #save imputed data
-  save(imputed_data, file=paste0('vectorize/', "imputed_data.rdata"))
-  
+  return(imputed_data)  
 }
 
