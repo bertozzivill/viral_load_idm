@@ -5,14 +5,13 @@ rubin.method<-function(survival.model.output,imputation_count,output.type=c('err
   output<-rep(list(NULL),nrow(index.survival.models));names(output)<-apply(index.survival.models,1,function(x) paste(x,sep=".",collapse="."))
   
   print(paste0("Rubins's method for ",imputation_count," imputations...using fixed effect estimates and se...returning ",output.type, " of t-test"))
-  for (model in 1:length(output))
-  {
+  for (model in 1:length(output)){
  
   out_p.value=out_error<-NULL
   
   for (j in 0:k){
-  coeff=sapply(c(1:m)+j*m,function(x) survival.model.output[[x]]["summary",model][[1]]$coefficients[,"Estimate"])
-  se=sapply(c(1:m)+j*m,function(x) survival.model.output[[x]]["summary",model][[1]]$coefficients[,"Std. Error"])
+  coeff=sapply(c(1:m)+j*m,function(x) summary(survival.model.output[[x]]["lm",model][[1]])$coefficients[,"Estimate"])
+  se=sapply(c(1:m)+j*m,function(x) summary(survival.model.output[[x]]["lm",model][[1]])$coefficients[,"Std. Error"])
   
   Qbar<-apply(coeff,1,mean)
   Ubar<-apply(se,1,mean)
