@@ -22,14 +22,14 @@ main_dir <- ("../data/")
 setwd(main_dir) 
 
 #load all data 
-load("alldata.rdata")
-patients <- unique(alldata$patient_id)
+load("prepped_data.rdata")
+patients <- unique(surv$patient_id)
 split_size <- ceiling(length(patients)/10)
 
 summary <- data.table(iteration=numeric(), split=numeric(), type=character(), mar=numeric(), aids=numeric(), death=numeric()) 
 
-#rename alldata because the subsets must be named "alldata"
-fulldata <- copy(alldata)
+#rename data because the subsets must be named "surv"
+fulldata <- copy(surv)
 setkeyv(fulldata, "patient_id")
 
 for (iteration in 1:10){
@@ -44,11 +44,11 @@ for (iteration in 1:10){
     test_patients <- shuffled[startval:endval]
     train_patients <- shuffled[!shuffled %in% test_patients]
     test_data <- fulldata[J(test_patients)]
-    alldata <- fulldata[J(train_patients)]
+    surv <- fulldata[J(train_patients)]
     
     #spot checks: tell me how many mar vs AIDS vs death events there are
     for (type in c("test", "train")){
-      if (type=="test") thisdata <- copy(test_data) else thisdata <- copy(alldata)
+      if (type=="test") thisdata <- copy(test_data) else thisdata <- copy(surv)
       mar <- length(unique(thisdata[event_type=="mar"]$patient_id))
       aids <- length(unique(thisdata[event_type=="aids"]$patient_id))
       death <- length(unique(thisdata[event_type=="death"]$patient_id))
@@ -56,7 +56,7 @@ for (iteration in 1:10){
     }
     
     
-    save(alldata, file=paste0("cross_validation/", iteration, "/", split, "/alldata.rdata"))
+    save(surv, file=paste0("cross_validation/", iteration, "/", split, "/surv.rdata"))
     save(test_data, file=paste0("cross_validation/", iteration, "/", split, "/test_data.rdata"))
     startval <- startval+split_size
   }

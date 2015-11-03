@@ -184,7 +184,7 @@ alldata <- alldata[vl_obs_count>1]
 save(alldata, file="alldata.rdata")
 
 #################################################################
-# V. Split into relevant datasets, save in format for jmre
+# V. Split into relevant datasets, save
 #################################################################
 
 ## viral load
