@@ -127,5 +127,6 @@ surv <- merge(surv, hybrid_spvl, by="patient_id", all=T)
 bins <- c(seq(15, 60, 15), 100)
 surv[,agebin:=cut(surv$agesero, bins, include.lowest=TRUE)]
 
+
 save(surv, file=paste0(main_dir, "prepped_data.rdata"))
 
