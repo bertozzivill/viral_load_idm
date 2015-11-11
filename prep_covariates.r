@@ -103,8 +103,9 @@ formula_vl <- "vl~ModelGradient(time=time,b0,b1,b2,b3)~ (b0|patient_id) + (b1|pa
 output_vl <- run_nonlin(formula_vl, data=vl)
 re_vl <- output_vl[[2]]
 
+spvl_model.summary<-summary(output_vl[[1]])
 missing <- rownames(re_vl[is.na(re_vl$spvl),])
-save(missing,re_vl,vl,file=paste0(main_dir,"missing_spvl_model.Rdata"))
+save(missing,re_vl,vl,spvl_model.summary,file=paste0(main_dir,"missing_spvl_model.Rdata"))
 
 new_vl <- vl[!patient_id %in% missing]
 print("rerunnig viral load model")

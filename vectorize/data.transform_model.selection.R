@@ -69,7 +69,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   index.survival.models<-expand.grid(
                               spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
                               interaction=c(0,1),
-                              bins=list(c(0),c(seq(15,60,15),100)))
+                              bins=list(c(0),c(seq(15,60,15),100),c(15,20,30,40,100)))
   
   index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
   
