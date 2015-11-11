@@ -13,7 +13,7 @@ output.AIC<-function(survival.model.output,imputation_count){
       AIC=sapply(c(1:id)+j*id,function(x) survival.model.output[[x]]["AIC",model][[1]])
       out_AIC<-rbind(out_AIC,AIC)
     }
-    rownames(out_AIC)<-run
+    rownames(out_AIC)<-colnames(data.for.survival)
     output[[model]]<-out_AIC
     
   }

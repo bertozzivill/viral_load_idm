@@ -23,12 +23,14 @@ library(reshape2)
 library(Amelia)
 
 #main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
-#main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
-  
-main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
+#main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"  
+#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
+
+main_dir <-"/home/cselinger/HIV-Cascade/merge/data/"
+
 
 #load data
-load(paste0(main_dir, "surv.rdata"))
+load(paste0(main_dir, "prepped_data.rdata"))
 
   ############################################################################################################
   ## loop over data transformations/imputations
@@ -39,7 +41,7 @@ load(paste0(main_dir, "surv.rdata"))
                                    debias=c(0,1),
                                    impute_type=c("with_vars", "no_vars"),
                                    impute.with.aids=c(F,T),
-                                   imputation_count=3)
+                                   imputation_count=10)
 
   run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
 
@@ -85,34 +87,53 @@ load(paste0(main_dir, "surv.rdata"))
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means
   save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
   
-  ##Rubins's method for multiple imputations
-  source("rubin.method.R")
-  rubin.method.error<-rubin.method(survival.model.output,imputation_count=3,output.type = 'error')
-  mean.rubin.method.error<-lapply(rubin.method.error,function(x)rowMeans(x))
-  
-  ############################################################################################################
-  ## modelselection per data transformation
-  ##############################################################################################################
-  
-  source("output.AIC.R")
-  AIC<-output.AIC(survival.model.output,imputation_count=3)
-  minAIC<-lapply(AIC,function(x)order(x,decreasing=FALSE)[1])
-  
-  #get min AIC per data.transform (average over imputations)
-  meanAIC<-lapply(AIC,rowMeans)
-  A<-sapply(1:nrow(index.survival.models),function(k) {order(sapply(meanAIC,function(x){x[k]}))[1]})
-  
-  ##matrix, first row: model, second row data transform
-  modelselection<-data.table(data.transform=1:length(run),bestmodel=A)
-  modelselection[,min.Rubin.error:=
-                   order(mapply(function(x,k){mean.rubin.method.error[[x]][[k]]},modelselection$bestmodel,modelselection$data.transform))[1]]
+##Rubins's method for multiple imputations
+imputation_count=nrow(data.for.survival)
+
+source("rubin.method.R")
+rubin.method.error<-rubin.method(survival.model.output,imputation_count=imputation_count,output.type = 'error')
+mean.rubin.method.error<-lapply(rubin.method.error,function(x)rowMeans(x))
+
+############################################################################################################
+## modelselection per data transformation
+##############################################################################################################
+
+source("output.AIC.R")
+AIC<-output.AIC(survival.model.output,imputation_count=imputation_count)
+
+
+#get min AIC per data.transform (average over imputations)
+meanAIC<-lapply(AIC,rowMeans)
+A<-sapply(1:ncol(data.for.survival),function(k) {order(sapply(meanAIC,function(x){x[k]}))[1]})
+
+#now: for data transform with min Rubin, take the model with min AIC
+
+delta.hats<-unlist(lapply(mean.rubin.method.error,function(x) order(x)[1]))
+mu.hat<-order(mapply(function(x,k){x[k]},meanAIC,unlist(lapply(mean.rubin.method.error,function(x) order(x)[1]))))[1]
+delta.hat<-delta.hats[mu.hat]
+
   
   ##results: best model with smallest imputation error average
   modelnames<-apply(index.survival.models,1,function(x) paste0(x,collapse="-"))
   
-  print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
-               run[modelselection$data.transform[1]],
-               " and MODEL ",
-               modelnames[modelselection$min.Rubin.error[1]]
-  ))
-  
+
+print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
+             colnames(data.for.survival)[delta.hat],
+             " and MODEL ",
+             modelnames[mu.hat]
+))
+
+
+##rerun bestmodel
+data=data.for.survival[,delta.hat][[1]]
+
+bestmodel<-LinearSurvivalModel(return.modelobject=1,
+                               spvl_method=index.survival.models$spvl_method[mu.hat],
+                               interaction=index.survival.models$interaction[mu.hat],
+                               bins=unlist(index.survival.models$bins[mu.hat])
+)
+
+
+bestmodel<-list('lm'=bestmodel,'data'=data,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
+save(bestmodel,file=paste0(main_dir,'bestmodel.Rdata'))
+
