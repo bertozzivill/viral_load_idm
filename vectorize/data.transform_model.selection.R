@@ -14,8 +14,10 @@
 ##
 ## Run from within the "vectorize" folder!
 ####################################################################################################
-
 rm(list=ls())
+#data.transform_model.selection<-function(test.run=0){
+test.run=1
+
 library(data.table)
 library(ggplot2)
 library(lme4)
@@ -42,9 +44,11 @@ load(paste0(main_dir, "prepped_data.rdata"))
                                    impute_type=c("with_vars", "no_vars"),
                                    impute.with.aids=c(F,T),
                                    imputation_count=10)
-
+ 
   run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
 
+  if(test.run!=0){index.data.transform<-index.data.transform[c(1:test.run),]}
+  
   source("data.transform.R")
 
   data.for.survival<-mapply(data.transform,
@@ -69,12 +73,13 @@ load(paste0(main_dir, "prepped_data.rdata"))
   index.survival.models<-expand.grid(
                               spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
                               interaction=c(0,1),
-                              bins=list(c(0),c(seq(15,60,15),100),c(15,20,30,40,100)))
+                              bins=list(0,c(seq(15,60,15),100),c(15,20,30,40,100)))
   
   index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
   
   source("LinearSurvivalModel.R")
-  
+  load(file=paste0(main_dir,"imputed_survival_data.rdata"))
+
   survival.model.output<-list()
   for (k in 1:length(data.for.survival)){
             data=data.for.survival[[k]]
@@ -136,4 +141,8 @@ bestmodel<-LinearSurvivalModel(return.modelobject=1,
 
 bestmodel<-list('lm'=bestmodel,'data'=data,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
 save(bestmodel,file=paste0(main_dir,'bestmodel.Rdata'))
+
+source("lm2csv.R")
+lm2csv(bestmodel$lm,paste0(main_dir,'table.bestmodel.coefficients.',confint=TRUE))
+
 
