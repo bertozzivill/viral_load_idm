@@ -6,7 +6,7 @@ plot.survival<-function(bestmodel.lm=bestmodel$lm,bestmodel.name=bestmodel$name,
   moderation.agesero<-function(spvl=5,agesero){coeff[1]+(coeff[2]+coeff[4]*spvl)*agesero}
   moderation.spvl<-function(agesero=30,spvl){coeff[1]+(coeff[3]+coeff[4]*agesero)*spvl}
   data<-na.omit(bestmodel$data)
-  
+ 
 ##PLOTS####
   ##survival surface
 
@@ -14,13 +14,14 @@ plot.survival<-function(bestmodel.lm=bestmodel$lm,bestmodel.name=bestmodel$name,
   interaction<-as.numeric(unlist(strsplit(as.character(bestmodel.name),"-",fixed=TRUE))[2])
   bins<-unlist(strsplit(as.character(bestmodel.name),"-",fixed=TRUE))[3]
   
-  z1 <- seq(20,60,0.1);z2<-seq(2,6,0.1);z3=as.factor(c(1,2));#z4=as.factor(levels(data$agebin))
+  z1 <- seq(20,60,0.1);z2<-seq(2,6,0.1);z3=as.factor(levels(data$event_num));#z4=as.factor(levels(data$agebin))
   newdf <- expand.grid(agesero=z1,spvl_model=z2,event_num=z3);colnames(newdf)[2]<-spvl_method
   
   data.surface<-predict(bestmodel.lm, newdf,se.fit=TRUE)
   surface=data.table(transform(newdf, survival=data.surface$fit));surface$se=data.surface$se.fit
   surface[,survival:=exp(survival)];surface[,se:=100*(exp(se)-1)];surface[,se:=round(se,4)]; setnames(surface,spvl_method,'spvl')
-  levels(surface$event_num)<-c("AIDS","Death")
+  levels(surface$event_num)<-c("AIDS","Death")[as.numeric(levels(data$event_num))]
+
 
   library(directlabels)
   library(ggplot2)
@@ -38,10 +39,12 @@ plot.survival<-function(bestmodel.lm=bestmodel$lm,bestmodel.name=bestmodel$name,
 
 
 
-z1 <- seq(20,60,10);z2<-seq(2,6,1);z3=as.factor(c(1,2))
+z1 <- seq(20,60,10);z2<-seq(2,6,1);z3=as.factor(levels(data$event_num))
 newdf <- expand.grid(agesero=z1,spvl_model=z2,event_num=z3);colnames(newdf)[2]<-spvl_method
 data.agesero<-data.table(transform(newdf, survival=predict(bestmodel.lm, newdf,se.fit=TRUE)));setnames(data.agesero,spvl_method,'spvl')
-levels(data.agesero$event_num)<-c("AIDS","Death")
+levels(data.agesero$event_num)<-c("AIDS","Death")[as.numeric(levels(data$event_num))]
+
+
 dodge <- position_dodge(width=0.5)
 limits <- aes(x=agesero,ymax = exp(survival.fit + survival.se.fit), ymin=exp(survival.fit - survival.se.fit))
 
@@ -83,13 +86,17 @@ limits <- aes(x=agesero,ymax = exp(survival.fit + survival.se.fit), ymin=exp(sur
   min=moderation.agesero(spvl=min(data$spvl_model),agesero=seq(20,60,10)),
   max=moderation.agesero(spvl=max(data$spvl_model),agesero=seq(20,60,10))
   )
+  #levels(mod.agesero$event_num)<-c("AIDS","Death")[as.numeric(levels(data$event_num))]
   
+
   mod.spvl<-data.frame(
   spvl=c(2:7),
   min=moderation.spvl(agesero=min(data$agesero),spvl=c(2:7)),
   max=moderation.spvl(agesero=max(data$agesero),spvl=c(2:7))
   )
-  
+  #levels(mod.spvl$event_num)<-c("AIDS","Death")[as.numeric(levels(data$event_num))]
+
+
   mod.agesero<-melt(mod.agesero,id.vars='agesero')
   mod.spvl<-melt(mod.spvl,id.vars='spvl')
  

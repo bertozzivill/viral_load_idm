@@ -33,7 +33,7 @@ plot.surface(bestmodel$lm,bestmodel$name)
 dev.off()
 
 #Figure 3bis
-png('../figures/Figure3bis.png',width=35, height=30, units='cm', res=400)
+png('../figures/Figure3bis.png',width=45, height=35, units='cm', res=400)
 plot.survival(bestmodel$lm,bestmodel$name)
 dev.off()
 
