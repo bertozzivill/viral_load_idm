@@ -15,107 +15,126 @@
 ## Run from within the "vectorize" folder!
 ####################################################################################################
 
-#rm(list=ls())
+rm(list=ls())
+
 library(data.table)
 library(ggplot2)
 library(lme4)
 library(reshape2)
 library(Amelia)
 
-#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
-#main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
-main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
+#main_dir <-"/home/cselinger/HIV-Cascade/merge/data/"
+main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/")
+  
+#load data
+load(paste0(main_dir, "prepped_data.rdata"))
 
-data.transform_model.selection <- function(main_dir){
-  #load data
-  load(paste0(main_dir, "surv.rdata"))
-  
-  ############################################################################################################
-  ## loop over data transformations/imputations
-  ##############################################################################################################
-  
-  
-  index.data.transform=expand.grid(upper_bound=3.7,
-                                   debias=c(0,1),
-                                   impute_type=c("with_vars", "no_vars"),
-                                   impute.with.aids=c(F,T),
-                                   imputation_count=3)
-  
-  run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
-  
-  source("data.transform.R")
-  
-  data.for.survival<-mapply(data.transform,
-                            upper_bound=index.data.transform$upper_bound,
-                            debias=index.data.transform$debias,
-                            impute_type=index.data.transform$impute_type,
-                            impute.with.aids=index.data.transform$impute.with.aids,
-                            imputation_count=index.data.transform$imputation_count,
-                            MoreArgs=list(surv=surv)
-  )
-  
-  rownames(data.for.survival)<-paste0("imputation_number=",c(1:index.data.transform$imputation_count[1]))
-  colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
-  
-  #names(out)<-paste0('imputed_data: ',"upper bound=", upper_bound," | debias=", debias," | impute_type=",impute_type,"| impute.with.aids=", impute.with.aids," || imputation_number=",1:imputation_count)
-  save(data.for.survival, file=paste0(main_dir, "imputed_survival_data.rdata"))  
-  
-  ############################################################################################################
-  ## loop over survival models, per data transform and multiple imputations
-  ##############################################################################################################
-  
-  index.survival.models<-expand.grid(
-    spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
-    interaction=c(0,1),
-    bins=list(c(0),c(seq(15,60,15),100)))
-  
-  index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
-  
-  source("LinearSurvivalModel.R")
-  
-  survival.model.output<-list()
-  for (k in 1:length(data.for.survival)){
-    #data=data.for.survival[[k]]
-    survival.model.output[[k]]<-mapply(LinearSurvivalModel,
-                                       spvl_method=index.survival.models$spvl_method,
-                                       interaction=index.survival.models$interaction,
-                                       bins=index.survival.models$bins,
-                                       MoreArgs=list(data=data.for.survival[[k]]))
-  }
-  
-  #save regression outputs for cross-validation, as well as the index values telling you what each list element means
-  save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
-  
-  ##Rubins's method for multiple imputations
-  source("rubin.method.R")
-  rubin.method.error<-rubin.method(survival.model.output,imputation_count=3,output.type = 'error')
-  mean.rubin.method.error<-lapply(rubin.method.error,function(x)rowMeans(x))
-  
-  ############################################################################################################
-  ## modelselection per data transformation
-  ##############################################################################################################
-  
-  source("output.AIC.R")
-  AIC<-output.AIC(survival.model.output,imputation_count=3)
-  minAIC<-lapply(AIC,function(x)order(x,decreasing=FALSE)[1])
-  
-  #get min AIC per data.transform (average over imputations)
-  meanAIC<-lapply(AIC,rowMeans)
-  A<-sapply(1:nrow(index.survival.models),function(k) {order(sapply(meanAIC,function(x){x[k]}))[1]})
-  
-  ##matrix, first row: model, second row data transform
-  modelselection<-data.table(data.transform=1:length(run),bestmodel=A)
-  modelselection[,min.Rubin.error:=
-                   order(mapply(function(x,k){mean.rubin.method.error[[x]][[k]]},modelselection$bestmodel,modelselection$data.transform))[1]]
+############################################################################################################
+## loop over data transformations/imputations
+##############################################################################################################
+
+
+index.data.transform=expand.grid(upper_bound=3.7,
+                                 debias=c(0,1),
+                                 impute_type=c("with_vars", "no_vars"),
+                                 impute.with.aids=c(F,T),
+                                 imputation_count=10)
+
+run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
+
+source("data.transform.R")
+
+data.for.survival<-mapply(data.transform,
+                          upper_bound=index.data.transform$upper_bound,
+                          debias=index.data.transform$debias,
+                          impute_type=index.data.transform$impute_type,
+                          impute.with.aids=index.data.transform$impute.with.aids,
+                          imputation_count=index.data.transform$imputation_count,
+                          MoreArgs=list(surv=surv)
+)
+
+rownames(data.for.survival)<-paste0("imputation_number=",c(1:index.data.transform$imputation_count[1]))
+colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
+
+#names(out)<-paste0('imputed_data: ',"upper bound=", upper_bound," | debias=", debias," | impute_type=",impute_type,"| impute.with.aids=", impute.with.aids," || imputation_number=",1:imputation_count)
+save(data.for.survival, file=paste0(main_dir, "imputed_survival_data.rdata"))  
+
+############################################################################################################
+## loop over survival models, per data transform and multiple imputations
+##############################################################################################################
+
+index.survival.models<-expand.grid(
+                            spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
+                            interaction=c(0,1),
+                            bins=list(0,c(seq(15,60,15),100),c(15,20,30,40,100)))
+
+index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
+
+source("LinearSurvivalModel.R")
+load(file=paste0(main_dir,"imputed_survival_data.rdata"))
+
+survival.model.output<-list()
+for (k in 1:length(data.for.survival)){
+  survival.model.output[[k]]<-mapply(LinearSurvivalModel,
+                                     spvl_method=index.survival.models$spvl_method,
+                                     interaction=index.survival.models$interaction,
+                                     bins=index.survival.models$bins,
+                                     MoreArgs=list(data=data.for.survival[[k]]))
+}
+
+#save regression outputs for cross-validation, as well as the index values telling you what each list element means
+save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
+
+##Rubins's method for multiple imputations
+imputation_count=nrow(data.for.survival)
+
+source("rubin.method.R")
+rubin.method.error<-rubin.method(survival.model.output,imputation_count=imputation_count,output.type = 'error')
+mean.rubin.method.error<-lapply(rubin.method.error,function(x)rowMeans(x))
+
+############################################################################################################
+## modelselection per data transformation
+##############################################################################################################
+
+source("output.AIC.R")
+AIC<-output.AIC(survival.model.output,imputation_count=imputation_count)
+
+
+#get min AIC per data.transform (average over imputations)
+meanAIC<-lapply(AIC,rowMeans)
+A<-sapply(1:ncol(data.for.survival),function(k) {order(sapply(meanAIC,function(x){x[k]}))[1]})
+
+#now: for data transform with min Rubin, take the model with min AIC
+
+delta.hats<-unlist(lapply(mean.rubin.method.error,function(x) order(x)[1]))
+mu.hat<-order(mapply(function(x,k){x[k]},meanAIC,unlist(lapply(mean.rubin.method.error,function(x) order(x)[1]))))[1]
+delta.hat<-delta.hats[mu.hat]
+
   
   ##results: best model with smallest imputation error average
   modelnames<-apply(index.survival.models,1,function(x) paste0(x,collapse="-"))
-  
-  print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
-               run[modelselection$data.transform[1]],
-               " and MODEL ",
-               modelnames[modelselection$min.Rubin.error[1]]
-  ))
-  
-}
+
+print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
+             colnames(data.for.survival)[delta.hat],
+             " and MODEL ",
+             modelnames[mu.hat]
+))
+
+
+##rerun bestmodel
+data=data.for.survival[,delta.hat][[1]]
+
+bestmodel<-LinearSurvivalModel(return.modelobject=1,
+                               spvl_method=index.survival.models$spvl_method[mu.hat],
+                               interaction=index.survival.models$interaction[mu.hat],
+                               bins=unlist(index.survival.models$bins[mu.hat])
+)
+
+
+bestmodel<-list('lm'=bestmodel,'data'=data,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
+save(bestmodel,file=paste0(main_dir,'bestmodel.Rdata'))
+
+source("lm2csv.R")
+lm2csv(bestmodel$lm,paste0(main_dir,'table.bestmodel.coefficients.',confint=TRUE))
+
 

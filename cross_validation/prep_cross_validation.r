@@ -56,7 +56,7 @@ for (iteration in 1:10){
     }
     
     
-    save(surv, file=paste0("cross_validation/", iteration, "/", split, "/surv.rdata"))
+    save(surv, file=paste0("cross_validation/", iteration, "/", split, "/prepped_data.rdata"))
     save(test_data, file=paste0("cross_validation/", iteration, "/", split, "/test_data.rdata"))
     startval <- startval+split_size
   }

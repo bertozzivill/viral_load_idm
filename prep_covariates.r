@@ -11,8 +11,10 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
+#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
 #main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
+main_dir <- "/home/cselinger/HIV-Cascade/merge/data/"
+
 
 ##################################################
 ## I. Define a function that runs the model, 
@@ -54,7 +56,7 @@ run_nonlin <- function(model_formula, data){
 
 #bonus: function for calculating geometric means
 gm_mean = function(x, na.rm=TRUE){
-  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x))
+  exp(sum(log(x[x > 0]), na.rm=na.rm) / length(x[x>0]))
 }
 
 ################################
@@ -101,7 +103,9 @@ formula_vl <- "vl~ModelGradient(time=time,b0,b1,b2,b3)~ (b0|patient_id) + (b1|pa
 output_vl <- run_nonlin(formula_vl, data=vl)
 re_vl <- output_vl[[2]]
 
+spvl_model.summary<-summary(output_vl[[1]])
 missing <- rownames(re_vl[is.na(re_vl$spvl),])
+save(missing,re_vl,vl,spvl_model.summary,file=paste0(main_dir,"missing_spvl_model.Rdata"))
 
 new_vl <- vl[!patient_id %in% missing]
 print("rerunnig viral load model")

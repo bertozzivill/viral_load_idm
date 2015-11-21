@@ -24,7 +24,7 @@ rubin.method<-function(survival.model.output,imputation_count,output.type=c('err
   out_error<-rbind(out_error,error)
   out_p.value<-rbind(out_p.value,p.value)
   }
-  rownames(out_error)=rownames(out_p.value)<-run
+  rownames(out_error)=rownames(out_p.value)<-colnames(data.for.survival)
   if (output.type=='error'){
   output[[model]]<-out_error}else
   {

@@ -8,8 +8,8 @@
 # then plot 1 will go in the upper left, 2 will go in the upper right, and
 # 3 will go all the way across the bottom.
 #
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL,maintitle='main title') {
-  require(grid)
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
   
   # Make a list from the ... arguments and plotlist
   plots <- c(list(...), plotlist)
@@ -31,14 +31,14 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL,maintitle='m
   } else {
     # Set up the page
     grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout)+1, ncol(layout))))
-    grid.text(maintitle, vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
     # Make each plot, in the correct location
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
       
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row+1,
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
                                       layout.pos.col = matchidx$col))
     }
   }
