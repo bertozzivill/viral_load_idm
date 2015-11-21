@@ -15,10 +15,8 @@ library(foreign)
 library(data.table)
 library(reshape2)
 require(bit64)
-setwd("C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/code/")
-#setwd("C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/code")
 
-main_dir <- ("../data/")
+main_dir <- ("/clustermp/abertozz/vl_cross_validation/")
 setwd(main_dir) 
 
 #load all data 
@@ -39,6 +37,9 @@ for (iteration in 1:10){
   startval <- 1
   
   for (split in 1:10){
+    #make directory
+    dir.create(paste0(main_dir, iteration, "/", split, "/")
+    
     print(paste("split", split))
     endval <- split_size*split
     test_patients <- shuffled[startval:endval]
@@ -55,9 +56,8 @@ for (iteration in 1:10){
       summary <- rbind(summary, list(iteration, split, type, mar, aids, death))
     }
     
-    
-    save(surv, file=paste0("cross_validation/", iteration, "/", split, "/prepped_data.rdata"))
-    save(test_data, file=paste0("cross_validation/", iteration, "/", split, "/test_data.rdata"))
+    save(surv, file=paste0(iteration, "/", split, "/prepped_data.rdata"))
+    save(test_data, file=paste0(iteration, "/", split, "/test_data.rdata"))
     startval <- startval+split_size
   }
 }

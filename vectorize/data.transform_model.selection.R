@@ -23,8 +23,10 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-#main_dir <-"/home/cselinger/HIV-Cascade/merge/data/"
-main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/")
+#depending on who runs the code and where, you'll either need to look for Christian's VM, Amelia's home computer, or the cluster (the latter being a 
+# passed argument for parallelized cross-validation)
+root_dir <- ifelse(dir.exists("/home/cselinger/", "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"))
+main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], root_dir)
   
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
@@ -32,7 +34,6 @@ load(paste0(main_dir, "prepped_data.rdata"))
 ############################################################################################################
 ## loop over data transformations/imputations
 ##############################################################################################################
-
 
 index.data.transform=expand.grid(upper_bound=3.7,
                                  debias=c(0,1),
@@ -132,7 +133,7 @@ bestmodel<-LinearSurvivalModel(return.modelobject=1,
 
 
 bestmodel<-list('lm'=bestmodel,'data'=data,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
-save(bestmodel,file=paste0(main_dir,'bestmodel.Rdata'))
+save(bestmodel,file=paste0(main_dir,'bestmodel_in_sample.Rdata'))
 
 source("lm2csv.R")
 lm2csv(bestmodel$lm,paste0(main_dir,'table.bestmodel.coefficients.',confint=TRUE))
