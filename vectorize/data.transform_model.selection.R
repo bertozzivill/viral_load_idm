@@ -15,7 +15,7 @@
 ## Run from within the "vectorize" folder!
 ####################################################################################################
 
-rm(list=ls())
+#rm(list=ls())
 library(data.table)
 library(ggplot2)
 library(lme4)
@@ -24,12 +24,12 @@ library(Amelia)
 
 #main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
 #main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
-  
 main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
 
-#load data
-load(paste0(main_dir, "surv.rdata"))
-
+data.transform_model.selection <- function(main_dir){
+  #load data
+  load(paste0(main_dir, "surv.rdata"))
+  
   ############################################################################################################
   ## loop over data transformations/imputations
   ##############################################################################################################
@@ -40,11 +40,11 @@ load(paste0(main_dir, "surv.rdata"))
                                    impute_type=c("with_vars", "no_vars"),
                                    impute.with.aids=c(F,T),
                                    imputation_count=3)
-
+  
   run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
-
+  
   source("data.transform.R")
-
+  
   data.for.survival<-mapply(data.transform,
                             upper_bound=index.data.transform$upper_bound,
                             debias=index.data.transform$debias,
@@ -52,22 +52,22 @@ load(paste0(main_dir, "surv.rdata"))
                             impute.with.aids=index.data.transform$impute.with.aids,
                             imputation_count=index.data.transform$imputation_count,
                             MoreArgs=list(surv=surv)
-                            )
-
+  )
+  
   rownames(data.for.survival)<-paste0("imputation_number=",c(1:index.data.transform$imputation_count[1]))
   colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
   
   #names(out)<-paste0('imputed_data: ',"upper bound=", upper_bound," | debias=", debias," | impute_type=",impute_type,"| impute.with.aids=", impute.with.aids," || imputation_number=",1:imputation_count)
   save(data.for.survival, file=paste0(main_dir, "imputed_survival_data.rdata"))  
-
+  
   ############################################################################################################
   ## loop over survival models, per data transform and multiple imputations
   ##############################################################################################################
   
   index.survival.models<-expand.grid(
-                              spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
-                              interaction=c(0,1),
-                              bins=list(c(0),c(seq(15,60,15),100)))
+    spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
+    interaction=c(0,1),
+    bins=list(c(0),c(seq(15,60,15),100)))
   
   index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
   
@@ -75,11 +75,12 @@ load(paste0(main_dir, "surv.rdata"))
   
   survival.model.output<-list()
   for (k in 1:length(data.for.survival)){
-            data=data.for.survival[[k]]
-            survival.model.output[[k]]<-mapply(LinearSurvivalModel,
-            spvl_method=index.survival.models$spvl_method,
-            interaction=index.survival.models$interaction,
-            bins=index.survival.models$bins)
+    #data=data.for.survival[[k]]
+    survival.model.output[[k]]<-mapply(LinearSurvivalModel,
+                                       spvl_method=index.survival.models$spvl_method,
+                                       interaction=index.survival.models$interaction,
+                                       bins=index.survival.models$bins,
+                                       MoreArgs=list(data=data.for.survival[[k]]))
   }
   
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means
@@ -116,3 +117,5 @@ load(paste0(main_dir, "surv.rdata"))
                modelnames[modelselection$min.Rubin.error[1]]
   ))
   
+}
+

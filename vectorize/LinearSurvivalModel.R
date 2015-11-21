@@ -1,4 +1,4 @@
-LinearSurvivalModel<-function(#data,
+LinearSurvivalModel<-function(data,
                               spvl_method='spvl_model',
                               interaction=0,
                               bins=c(seq(15,65,10),100),
