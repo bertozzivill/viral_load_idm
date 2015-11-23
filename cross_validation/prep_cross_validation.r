@@ -16,7 +16,7 @@ library(data.table)
 library(reshape2)
 require(bit64)
 
-main_dir <- ("/clustermp/abertozz/vl_cross_validation/")
+main_dir <- ("/clustertmp/abertozz/vl_cross_validation/")
 setwd(main_dir) 
 
 #load all data 
@@ -38,7 +38,7 @@ for (iteration in 1:10){
   
   for (split in 1:10){
     #make directory
-    dir.create(paste0(main_dir, iteration, "/", split, "/")
+    dir.create(paste0(iteration, "/", split, "/"), recursive=T)
     
     print(paste("split", split))
     endval <- split_size*split

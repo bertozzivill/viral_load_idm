@@ -25,9 +25,13 @@ library(Amelia)
 
 #depending on who runs the code and where, you'll either need to look for Christian's VM, Amelia's home computer, or the cluster (the latter being a 
 # passed argument for parallelized cross-validation)
-root_dir <- ifelse(dir.exists("/home/cselinger/", "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"))
+dir.exists <- function(d) {
+  de <- file.info(d)$isdir
+  ifelse(is.na(de), FALSE, de)
+}
+root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
 main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], root_dir)
-  
+
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
 
@@ -128,7 +132,8 @@ data=data.for.survival[,delta.hat][[1]]
 bestmodel<-LinearSurvivalModel(return.modelobject=1,
                                spvl_method=index.survival.models$spvl_method[mu.hat],
                                interaction=index.survival.models$interaction[mu.hat],
-                               bins=unlist(index.survival.models$bins[mu.hat])
+                               bins=unlist(index.survival.models$bins[mu.hat]),
+                               MoreArgs=list(data=data)
 )
 
 

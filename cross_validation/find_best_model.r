@@ -2,12 +2,12 @@
 
 library(data.table)
 
-main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/"
+main_dir <- commandArgs()[3]
 
 
 #load rmse results
 print("loading rmse")
-for (iteration in 1:8){
+for (iteration in 1:10){
   for (split in 1:10){
     new_dir <-paste0(main_dir, iteration, "/", split, "/")
     print(paste("iteration", iteration, "split", split))
@@ -16,7 +16,7 @@ for (iteration in 1:8){
   }
 }
 
-compiled_rmse <- lapply(1:8, function(iteration){
+compiled_rmse <- lapply(1:10, function(iteration){
       iteration_rmse <- lapply(1:10, function(split){
         new_dir <-paste0(main_dir, iteration, "/", split, "/")
         print(paste("iteration", iteration, "split", split))
@@ -40,4 +40,8 @@ best_row <- rownames(compiled_rmse)[[best_model[,"row"]]]
 best_col <- colnames(compiled_rmse)[[best_model[,"col"]]]
 
 print(paste("best model has data transform", best_row, "and model specification", best_col, "!"))
+
+fileConn<-file(paste0(main_dir, "best_model_out_of_sample.txt"))
+writeLines(paste("best model has data transform", best_row, "and model specification", best_col, "!"), fileConn)
+close(fileConn)
 

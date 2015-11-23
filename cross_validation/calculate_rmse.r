@@ -6,10 +6,8 @@
 ##                    "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
 ##                    "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
 ##                    
-## Output: Saves a dataset called "survival.model.output" to main_dir, which contains a matrix of 
-##          "lm" elements from which we can later predict and compare to the testing dataset if 
-##            we're validating. Also generates a number of plots for whatever model is deemed best
-##            by the AIC method of model selection. 
+## Output: Saves a dataset called "rmse.rdata" to main_dir, which contains a matrix of 
+##            rmse values which we can later combine across all testing splits to find a best model.
 ##
 ## Run from within the "vectorize" folder!
 ####################################################################################################
@@ -18,11 +16,12 @@ library(data.table)
 library(ggplot2)
 library(lme4)
 library(reshape2)
-library(Metrics)
+#library(Metrics)
 
 #main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
 
-calc_rmse <- function(main_dir){
+main_dir <- commandArgs()[3]
+
   #load models  and data
   print("loading data")
   load(paste0(main_dir, "survival_model_output.rdata"))
@@ -74,6 +73,10 @@ calc_rmse <- function(main_dir){
         
         this_model <- this_imputation["lm", model_index][[1]]
         
+        #bin the test data into the appropriate age groups for predictions.
+        bins <- model_info$bins[[1]]
+        if (bins!=0) test_data[,agebin:=cut(test_data$agesero, bins, include.lowest=TRUE)]
+        
         #predict
         test_data$predicted <- predict(this_model, newdata=test_data)
         
@@ -84,7 +87,9 @@ calc_rmse <- function(main_dir){
         # otherwise, use event_time.
         
         if (transform_info$debias ==1) event_colname <- "event_timeNew" else event_colname <- "event_time"
-        rmse <- rmse(rmse_data[[event_colname]], rmse_data$predicted)
+        #rmse <- rmse(rmse_data[[event_colname]], rmse_data$predicted)
+        #until the cluster gets the Metrics package loaded, run rmse by hand:
+        rmse <- sqrt(mean( (rmse_data[[event_colname]]-rmse_data$predicted)^2, na.rm=T) )
         
         #put rmse into the proper matrix: row==data transform, column=model specification, array==imputation
         all_rmse[transform_index, model_index, impute_index] <- rmse
@@ -97,4 +102,3 @@ calc_rmse <- function(main_dir){
   print("saving")
   save(all_rmse, file=paste0(main_dir, "rmse.rdata"))
 
-}
