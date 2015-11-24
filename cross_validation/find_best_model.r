@@ -41,6 +41,9 @@ best_col <- colnames(compiled_rmse)[[best_model[,"col"]]]
 
 print(paste("best model has data transform", best_row, "and model specification", best_col, "!"))
 
+#save
+save(compiled_rmse, file=paste0(main_dir, "compiled_rmse.rdata"))
+
 fileConn<-file(paste0(main_dir, "best_model_out_of_sample.txt"))
 writeLines(paste("best model has data transform", best_row, "and model specification", best_col, "!"), fileConn)
 close(fileConn)
