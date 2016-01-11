@@ -181,6 +181,15 @@ alldata <- alldata[visit_date<event_date]
 alldata[, vl_obs_count:=sum(!is.na(vl)), by="patient_id"]
 alldata <- alldata[vl_obs_count>1]
 
+#create event_type deathwithaids
+alldata[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
+alldata[,deathwithaids_indic:=aids_indic*death_indic]
+alldata[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
+alldata[,event_timeDeathwithaids:=event_time0]
+alldata[deathwithaids_indic==1,event_timeDeathwithaids:=as.numeric((death_date - serocon_date)/365),by='patient_id']
+alldata[,event_time:=event_timeDeathwithaids]
+
+
 #save full dataset
 save(alldata, file="alldata.rdata")
 
@@ -193,7 +202,7 @@ vl <- alldata[,list(patient_id, time=visit_time, vl, assay_ll, assay_type)]
 write.csv(vl, file=paste0(main_dir, "vl.csv"), row.names=F)
 
 ## survival
-surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
+surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, event_timeDeathwithaids, agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
 setkeyv(surv, NULL)
 surv <- unique(surv)
 write.csv(surv, file=paste0(main_dir, "surv.csv"), row.names=F)
