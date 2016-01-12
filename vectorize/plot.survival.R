@@ -60,7 +60,8 @@ limits <- aes(x=agesero,ymax = exp(survival.fit + survival.se.fit), ymin=exp(sur
     theme_bw()+
     theme(axis.text.x = element_text(angle = 0, hjust = 0,size=12))+
     labs(spvl='custom title')+
-    facet_grid(. ~event_num)
+    facet_grid(. ~event_num)+
+    scale_y_continuous(breaks=seq(5,20,1))
     
  
   
@@ -78,7 +79,8 @@ limits <- aes(x=agesero,ymax = exp(survival.fit + survival.se.fit), ymin=exp(sur
     theme_bw()+
     theme(axis.text.x = element_text(angle = 0, hjust = 0,size=12))+
     labs(spvl='custom title')+
-    facet_grid(. ~event_num)
+    facet_grid(. ~event_num)+
+    scale_y_continuous(breaks=seq(5,20,1))
   
 
   mod.agesero<-data.frame(
@@ -160,7 +162,7 @@ limits <- aes(x=agesero,ymax = exp(survival.fit + survival.se.fit), ymin=exp(sur
   
   source('multiplot.R')
 
-  return(multiplot(plot.mod.spvl,plot.mod.agesero,plot.agesero,plot.spvl,cols=2,maintitle = title))
+  return(multiplot(plot.mod.spvl,plot.mod.agesero,plot.spvl,plot.agesero,layout=matrix(c(1,3,2,4),nrow=2,byrow=TRUE),maintitle = title))
 }
 
 

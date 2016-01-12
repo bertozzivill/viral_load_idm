@@ -20,7 +20,7 @@ plot.surface<-function(bestmodel.lm,bestmodel.name,title='survival surface'){
   data.surface<-predict(bestmodel.lm, newdf,se.fit=TRUE)
   surface=data.table(transform(newdf, survival=data.surface$fit));surface$se=data.surface$se.fit
   surface[,survival:=exp(survival)];surface[,se:=100*(exp(se)-1)];surface[,se:=round(se,4)]; setnames(surface,spvl_method,'spvl')
-  levels(surface$event_num)<-c("AIDS","Death")
+  levels(surface$event_num)<-c("AIDS","Death")[as.numeric(levels(surface$event_num))]
   
   library(directlabels)
   library(ggplot2)

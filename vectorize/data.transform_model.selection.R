@@ -16,7 +16,8 @@
 ####################################################################################################
 rm(list=ls())
 #data.transform_model.selection<-function(test.run=0){
-test.run=1
+#test.run=c(1,4)#run only selected rows of data.transform.index
+test.run=0#run full data.transform.index
 
 library(data.table)
 library(ggplot2)
@@ -39,7 +40,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   ##############################################################################################################
   
   
-  index.data.transform=expand.grid(upper_bound=3.7,
+  index.data.transform=expand.grid(upper_bound=c(3.7),
                                    debias=c(0,1),
                                    impute_type=c("with_vars", "no_vars"),
                                    impute.with.aids=c(F,T),
@@ -47,7 +48,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
  
   run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
 
-  if(test.run!=0){index.data.transform<-index.data.transform[c(1:test.run),]}
+  if(test.run!=0){index.data.transform<-index.data.transform[c(test.run),]}
   
   source("data.transform.R")
 
@@ -72,7 +73,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   
   index.survival.models<-expand.grid(
                               spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
-                              interaction=c(0,1),
+                              interaction=c(1),
                               bins=list(0,c(seq(15,60,15),100),c(15,20,30,40,100)))
   
   index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
@@ -117,6 +118,9 @@ delta.hats<-unlist(lapply(mean.rubin.method.error,function(x) order(x)[1]))
 mu.hat<-order(mapply(function(x,k){x[k]},meanAIC,unlist(lapply(mean.rubin.method.error,function(x) order(x)[1]))))[1]
 delta.hat<-delta.hats[mu.hat]
 
+smallest5.delta.hats<-unlist(lapply(mean.rubin.method.error[mu.hat],function(x) order(x)[1:5]))
+smallest5.mean.rubin.method.error<-unlist(lapply(mean.rubin.method.error[mu.hat],function(x) sort(x)[1:5]))
+
   
   ##results: best model with smallest imputation error average
   modelnames<-apply(index.survival.models,1,function(x) paste0(x,collapse="-"))
@@ -125,7 +129,12 @@ delta.hat<-delta.hats[mu.hat]
 print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
              colnames(data.for.survival)[delta.hat],
              " and MODEL ",
-             modelnames[mu.hat]
+             modelnames[mu.hat],
+             " with the 5 smallest RUBIN errors for the model",
+             modelnames[mu.hat],
+             colnames(data.for.survival)[smallest5.delta.hats],
+             ": ",
+             smallest5.mean.rubin.method.error
 ))
 
 

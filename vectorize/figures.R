@@ -38,7 +38,9 @@ plot.survival(bestmodel$lm,bestmodel$name)
 dev.off()
 
 #Figure 3d
-png('../figures/Figure3d.png',width=35, height=30, units='cm', res=400)
+png('../figures/Figure3d.png',width=45, height=35, units='cm', res=400)
 plot.modelcurve(bestmodel$lm,bestmodel$name)
 dev.off()
+
+system('dropbox upload /home/cselinger/HIV-Cascade/merge/bertozzivill.viral_load_idm/figures/Figure3bis.png viral_loadNew/cascade/writing/Figure3bis.png')
 
