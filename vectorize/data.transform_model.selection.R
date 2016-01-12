@@ -16,12 +16,12 @@
 ####################################################################################################
 
 rm(list=ls())
-#<<<<<<< HEAD
-#data.transform_model.selection<-function(test.run=0){
+
+
 test.run=c(1,4)#run only selected rows of data.transform.index
 #test.run=0#run full data.transform.index
-#=======
-#>>>>>>> 0364f3a1fe133025ec8c6f8106b5728256c1cd3e
+
+
 
 library(data.table)
 library(ggplot2)
@@ -42,7 +42,7 @@ main_dir<-"/home/cselinger/HIV-Cascade/merge/data/"
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
 
-#<<<<<<< HEAD
+
   ############################################################################################################
   ## loop over data transformations/imputations
   ##############################################################################################################
@@ -101,7 +101,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means
   save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
   
-####===
+
 ##Rubins's method for multiple imputations
 imputation_count=nrow(data.for.survival)
 
