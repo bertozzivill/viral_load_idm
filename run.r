@@ -1,0 +1,8 @@
+setwd("/home/cselinger/HIV-Cascade/merge/bertozzivill.viral_load_idm")
+source("prep_competing_risks_cascade.r")
+setwd("../bertozzivill.viral_load_idm")
+source("prep_covariates.r")
+setwd("vectorize")
+source("data.transform_model.selection.R")
+source("../figures")
+system("csvtool readable ../../data/table.best*")
