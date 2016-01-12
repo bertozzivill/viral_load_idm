@@ -14,10 +14,14 @@
 ##
 ## Run from within the "vectorize" folder!
 ####################################################################################################
+
 rm(list=ls())
+#<<<<<<< HEAD
 #data.transform_model.selection<-function(test.run=0){
-#test.run=c(1,4)#run only selected rows of data.transform.index
-test.run=0#run full data.transform.index
+test.run=c(1,4)#run only selected rows of data.transform.index
+#test.run=0#run full data.transform.index
+#=======
+#>>>>>>> 0364f3a1fe133025ec8c6f8106b5728256c1cd3e
 
 library(data.table)
 library(ggplot2)
@@ -25,16 +29,20 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
-#main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"  
-#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
-
-main_dir <-"/home/cselinger/HIV-Cascade/merge/data/"
-
+#depending on who runs the code and where, you'll either need to look for Christian's VM, Amelia's home computer, or the cluster (the latter being a 
+# passed argument for parallelized cross-validation)
+dir.exists <- function(d) {
+  de <- file.info(d)$isdir
+  ifelse(is.na(de), FALSE, de)
+}
+root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
+main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], root_dir)
+main_dir<-"/home/cselinger/HIV-Cascade/merge/data/"
 
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
 
+#<<<<<<< HEAD
   ############################################################################################################
   ## loop over data transformations/imputations
   ##############################################################################################################
@@ -83,7 +91,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
 
   survival.model.output<-list()
   for (k in 1:length(data.for.survival)){
-            data=data.for.survival[[k]]
+            data=data.table(data.for.survival[[k]])
             survival.model.output[[k]]<-mapply(LinearSurvivalModel,
             spvl_method=index.survival.models$spvl_method,
             interaction=index.survival.models$interaction,
@@ -93,6 +101,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means
   save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
   
+####===
 ##Rubins's method for multiple imputations
 imputation_count=nrow(data.for.survival)
 
@@ -124,7 +133,6 @@ smallest5.mean.rubin.method.error<-unlist(lapply(mean.rubin.method.error[mu.hat]
   
   ##results: best model with smallest imputation error average
   modelnames<-apply(index.survival.models,1,function(x) paste0(x,collapse="-"))
-  
 
 print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
              colnames(data.for.survival)[delta.hat],
@@ -144,12 +152,13 @@ data=data.for.survival[,delta.hat][[1]]
 bestmodel<-LinearSurvivalModel(return.modelobject=1,
                                spvl_method=index.survival.models$spvl_method[mu.hat],
                                interaction=index.survival.models$interaction[mu.hat],
-                               bins=unlist(index.survival.models$bins[mu.hat])
+                               bins=unlist(index.survival.models$bins[mu.hat])#,
+                               #MoreArgs=list(data=data)
 )
 
 
 bestmodel<-list('lm'=bestmodel,'data'=data,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
-save(bestmodel,file=paste0(main_dir,'bestmodel.Rdata'))
+save(bestmodel,file=paste0(main_dir,'bestmodel_in_sample.Rdata'))
 
 source("lm2csv.R")
 lm2csv(bestmodel$lm,paste0(main_dir,'table.bestmodel.coefficients.',confint=TRUE))

@@ -129,10 +129,5 @@ surv <- merge(surv, re_vl[, list(patient_id, spvl_model=spvl)], by="patient_id",
 surv <- merge(surv, fraser_spvl, by="patient_id", all=T)
 surv <- merge(surv, hybrid_spvl, by="patient_id", all=T)
 
-#add a covariate "agebin" for binned ages
-bins <- c(seq(15, 60, 15), 100)
-surv[,agebin:=cut(surv$agesero, bins, include.lowest=TRUE)]
-
-
 save(surv, file=paste0(main_dir, "prepped_data.rdata"))
 

@@ -5,7 +5,7 @@ LinearSurvivalModel<-function(#data,
                               return.modelobject=0){
   
   bins<-unlist(bins)
-  data<-data.table(data)
+#  data<-data.table(data)
 #   print(paste0("type: ",typeof(data)))
 #   print(paste0("class: ",class(data)))
   ###agebins for categorical variable
