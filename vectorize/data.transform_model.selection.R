@@ -18,10 +18,8 @@
 rm(list=ls())
 
 
-test.run=c(1,4)#run only selected rows of data.transform.index
-#test.run=0#run full data.transform.index
-
-
+#test.run=c(1,4)#run only selected rows of data.transform.index
+test.run=0#run full data.transform.index
 
 library(data.table)
 library(ggplot2)
@@ -29,15 +27,13 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-#depending on who runs the code and where, you'll either need to look for Christian's VM, Amelia's home computer, or the cluster (the latter being a 
-# passed argument for parallelized cross-validation)
+#automatically finds correct directory name so we can stop commenting and uncommenting lines
 dir.exists <- function(d) {
   de <- file.info(d)$isdir
   ifelse(is.na(de), FALSE, de)
 }
 root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
 main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], root_dir)
-main_dir<-"/home/cselinger/HIV-Cascade/merge/data/"
 
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
@@ -145,22 +141,32 @@ print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
              smallest5.mean.rubin.method.error
 ))
 
-
-##rerun bestmodel
-data=data.for.survival[,delta.hat][[1]]
-
-bestmodel<-LinearSurvivalModel(return.modelobject=1,
-                               spvl_method=index.survival.models$spvl_method[mu.hat],
-                               interaction=index.survival.models$interaction[mu.hat],
-                               bins=unlist(index.survival.models$bins[mu.hat])#,
-                               #MoreArgs=list(data=data)
+#rerun bestmodel for ALL imputations, get combined coefficients/standard errors
+bestmodel<-lapply(data.for.survival[,delta.hat], function(data){
+  output <- LinearSurvivalModel(
+            data=data,
+            return.modelobject=1,
+            spvl_method=index.survival.models$spvl_method[mu.hat],
+            interaction=index.survival.models$interaction[mu.hat],
+            bins=unlist(index.survival.models$bins[mu.hat])
+            )
+  summary <- summary(output)$coefficients
+  return(data.table(summary, covariate=rownames(summary)))
+}
 )
 
+bestmodel <- lapply(1:10, function(imp){
+              bestmodel[[imp]][, imputation:=imp]
+})
 
-bestmodel<-list('lm'=bestmodel,'data'=data,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
+bestmodel <- do.call("rbind", bestmodel)
+setnames(bestmodel, c("Estimate", "Std. Error"), c("beta", "se"))
+
+#run function that calculates summary means and standard errors for a dataset of combined model results
+source("summarize_models.r")
+bestmodel_summary <- summarize_models(bestmodel)
+write.csv(bestmodel_summary, file=paste0(main_dir,"coefficients.csv", sep=''), row.names=F)
+
+bestmodel<-list('lm'=bestmodel_summary,'data'=data.for.survival,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
 save(bestmodel,file=paste0(main_dir,'bestmodel_in_sample.Rdata'))
-
-source("lm2csv.R")
-lm2csv(bestmodel$lm,paste0(main_dir,'table.bestmodel.coefficients.',confint=TRUE))
-
 

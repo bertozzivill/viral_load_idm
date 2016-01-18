@@ -1,14 +1,14 @@
 ##plotting figures
 library(data.table)
-#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
+main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
 #main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_loadNew/cascade/data/"
 #main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
-main_dir <-"/home/cselinger/HIV-Cascade/merge/data/"
+#main_dir <-"/home/cselinger/HIV-Cascade/merge/data/"
 
 #load plot scripts and data
 sapply(c("multiplot.R","ggsurv.R","plot.KM.curves.R","plot.spvl.agesero.distribution.R","plot.negative.slope_vl.measurements.R","plot.surface.R","plot.survival.R","plot.modelcurve.R"),source)
 surv <- fread(paste0(main_dir, "surv.csv")) #column 'AD' corresponds to 'aids_death_indic', 'ADtime' to 'event_time' in alldata.rdata
-load(paste0(main_dir,"bestmodel.Rdata"))
+load(paste0(main_dir,"bestmodel_in_sample.Rdata"))
 load(paste0(main_dir,"missing_spvl_model.Rdata"))
 
 #Figure 1
