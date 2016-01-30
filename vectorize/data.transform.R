@@ -50,13 +50,13 @@ data.transform<-function(upper_bound=3.5,debias=1,impute_type='no_vars',impute.w
   lapply(data,function(x) x[, event_num:= as.factor(event_num)])
   
   #if you've taken out the art observations: put them back
- # if (!impute.with.aids){
- #   final_cols <- c("patient_id","event_time","agesero","observed_survival","spvl_model","spvl_fraser","spvl_hybrid")
-  #  aids_events <- subset(aids_events,,final_cols)
-  #  aids_events[, event_num:=1]
-  #  print(names(aids_events))
-  #  data <- lapply(data,function(x) rbind(x, aids_events))
-  #} 
+ if (!impute.with.aids){
+   final_cols <- c("patient_id","event_time","agesero","observed_survival","spvl_model","spvl_fraser","spvl_hybrid")
+   aids_events <- subset(aids_events,,final_cols)
+   aids_events[, event_num:=1]
+   print(names(aids_events))
+   data <- lapply(data,function(x) rbind(x, aids_events))
+  } 
   
   out<-data
   return(out)

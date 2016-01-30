@@ -33,7 +33,7 @@ dir.exists <- function(d) {
   ifelse(is.na(de), FALSE, de)
 }
 root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
-main_dir <- ifelse(length(commandArgs()>2), commandArgs()[3], root_dir)
+main_dir <- ifelse(length(commandArgs())>2, commandArgs()[3], root_dir)
 
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
@@ -44,7 +44,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   ##############################################################################################################
   
   
-  index.data.transform=expand.grid(upper_bound=c(3.7),
+  index.data.transform=expand.grid(upper_bound=c(2.8, 2.9, 3.0, 3.1, 3.2),
                                    debias=c(0,1),
                                    impute_type=c("with_vars", "no_vars"),
                                    impute.with.aids=c(F,T),
@@ -144,7 +144,6 @@ print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
 #rerun bestmodel for ALL imputations, get combined coefficients/standard errors
 bestmodel<-lapply(data.for.survival[,delta.hat], function(data){
   output <- LinearSurvivalModel(
-            data=data,
             return.modelobject=1,
             spvl_method=index.survival.models$spvl_method[mu.hat],
             interaction=index.survival.models$interaction[mu.hat],

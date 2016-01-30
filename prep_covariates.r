@@ -11,9 +11,9 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
+main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
 #main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
-main_dir <- "/home/cselinger/HIV-Cascade/merge/data/"
+#main_dir <- "/home/cselinger/HIV-Cascade/merge/data/"
 
 
 ##################################################
@@ -69,7 +69,7 @@ load(paste0(main_dir, "alldata.rdata"))
 vl <- alldata[,list(patient_id, time=visit_time, vl, assay_ll, assay_type)]
 
 #generate survival dataset
-surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, event_timeDeathwithaids,agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
+surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
 setkeyv(surv, NULL)
 surv <- unique(surv)
 
@@ -99,7 +99,7 @@ fraser_spvl <- fraser_spvl[!duplicated(fraser_spvl)]
 ## IV. Run nonlinear vl model
 #############################################
 print("running viral load only model")
-source("vectorize/lm2csv.R")
+#source("vectorize/lm2csv.R")
 formula_vl <- "vl~ModelGradient(time=time,b0,b1,b2,b3)~ (b0|patient_id) + (b1|patient_id)"
 output_vl <- run_nonlin(formula_vl, data=vl)
 re_vl <- output_vl[[2]]
@@ -107,7 +107,7 @@ lm.spvl_model <- output_vl[[1]]
 missing <- rownames(re_vl[is.na(re_vl$spvl),])
 
 save(missing,re_vl,vl,file=paste0(main_dir,"missing_spvl_model.Rdata"))
-lm2csv(lm.spvl_model,"../data/table.spvl_model.",confint=FALSE)
+#lm2csv(lm.spvl_model,"../data/table.spvl_model.",confint=FALSE)
 
 new_vl <- vl[!patient_id %in% missing]
 print("rerunning viral load model")
