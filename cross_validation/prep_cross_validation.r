@@ -16,7 +16,7 @@ library(data.table)
 library(reshape2)
 require(bit64)
 
-main_dir <- ("/home/abertozz/vl_cross_validation/")
+main_dir <- ("/ihme/scratch/users/abertozz/vl_cross_validation/")
 setwd(main_dir) 
 
 #load all data 

@@ -4,18 +4,20 @@
 library(data.table)
 
 rm(list=ls())
-main_dir <- ("/homes/abertozz/vl_cross_validation/")
+main_dir <- ("/ihme/scratch/users/abertozz/vl_cross_validation/")
 setwd("../vectorize/")
 
 ## define qsub function
-qsub <- function(code, name="abertozz", arguments=NULL, hold=NULL, shell="r_shell.sh", slots=1, error_dir="/share/temp/sgeoutput/abertozz/errors", output_dir="/share/temp/sgeoutput/abertozz/output") {
+qsub <- function(code, name="abertozz", arguments=NULL, hold=NULL, shell="r_shell.sh", slots=1,
+                 error_dir="/ihme/scratch/users/abertozz/logging/errors",
+                 output_dir="/ihme/scratch/users/abertozz/logging/output") {
   
   # format arguments and hold IDs
   if(!is.null(arguments)) arguments <- paste(paste("\"", arguments, "\"", sep=""), collapse=" ")
   if(!is.null(hold) & length(hold)>1) hold <- paste(hold, collapse=",")
   
   # construct and submit qsub command and return the job ID
-  x <- paste("/usr/local/bin/SGE/bin/lx-amd64/qsub -cwd -P proj_US_counties",
+  x <- paste("/usr/local/bin/SGE/bin/lx-amd64/qsub -cwd",
              "-N", name,
              "-e", error_dir,
              "-o", output_dir,
