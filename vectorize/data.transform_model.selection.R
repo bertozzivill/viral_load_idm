@@ -44,7 +44,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   ##############################################################################################################
   
   
-  index.data.transform=expand.grid(upper_bound=c(2.8, 2.9, 3.0, 3.1, 3.2),
+  index.data.transform=expand.grid(upper_bound=c(3.0, 3.2),
                                    debias=c(0,1),
                                    impute_type=c("with_vars", "no_vars"),
                                    impute.with.aids=c(F,T),

@@ -18,6 +18,7 @@ set.seed(strtoi("0xCAFE"))
 library(foreign)
 library(data.table)
 library(reshape2)
+library(ggplot2)
 require(bit64)
 setwd("C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/code/")
 #setwd("C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/code")
@@ -154,8 +155,22 @@ data<- data[inf_mode==1 | inf_mode==6]
 
 alldata <- merge(data, viral, by="patient_id")
 
-#create event_type deathwithaids
+# for individuals with both an AIDS and a death event, we want to assume the deaths were AIDS deaths and 
+# log their time-to-event as their time-to-death. To make sure this is a valid assumption (i.e. that people die
+# fairly soon after an AIDS diagnosis), we make a histogram of the time between aids and death.
+aids_death_subset <- unique(alldata[aids_indic==1 & death_indic==1 & art_indic==0, list(patient_id, aids_date, death_date)])
+aids_death_subset[, aids_death_time:=as.numeric((death_date-aids_date)/365)]
+histo <- ggplot(aids_death_subset, aes(x=aids_death_time)) +
+                geom_bar(fill="black", alpha=0.7) +
+                labs(title="Time between AIDS and death, uncensord CASCADE patients",
+                     x="Time from AIDS to death, years")
+
+print(histo)
+
+
+#create event_type deathwithaids, NOT including individuals whose time from AIDS to death is longer than 2 years
 alldata[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
+alldata[deathwithaids_indic==1 & as.numeric((death_date-aids_date)/365)>2, deathwithaids_indic:=0] #exclude aids-death times over 2 years
 alldata[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
 alldata[deathwithaids_indic==1, event_date:=death_date]
 
