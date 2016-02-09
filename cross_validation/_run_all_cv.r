@@ -4,7 +4,7 @@
 library(data.table)
 
 rm(list=ls())
-main_dir <- ("/clustertmp/abertozz/vl_cross_validation/")
+main_dir <- ("/homes/abertozz/vl_cross_validation/")
 setwd("../vectorize/")
 
 ## define qsub function
