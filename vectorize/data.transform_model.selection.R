@@ -91,7 +91,8 @@ load(paste0(main_dir, "prepped_data.rdata"))
             survival.model.output[[k]]<-mapply(LinearSurvivalModel,
             spvl_method=index.survival.models$spvl_method,
             interaction=index.survival.models$interaction,
-            bins=index.survival.models$bins)
+            bins=index.survival.models$bins,
+            MoreArgs=list(data=data))
   }
   
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means
@@ -142,8 +143,9 @@ print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
 ))
 
 #rerun bestmodel for ALL imputations, get combined coefficients/standard errors
-bestmodel<-lapply(data.for.survival[,delta.hat], function(data){
+bestmodel<-lapply(data.for.survival[,delta.hat], function(this_data){
   output <- LinearSurvivalModel(
+            data=this_data,
             return.modelobject=1,
             spvl_method=index.survival.models$spvl_method[mu.hat],
             interaction=index.survival.models$interaction[mu.hat],
@@ -169,3 +171,33 @@ write.csv(bestmodel_summary, file=paste0(main_dir,"coefficients.csv", sep=''), r
 bestmodel<-list('lm'=bestmodel_summary,'data'=data.for.survival,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
 save(bestmodel,file=paste0(main_dir,'bestmodel_in_sample.Rdata'))
 
+#do the same thing, but for the out-of-sample model: data transform 3.2-1-no_vars- TRUE-10 and model specification spvl_model-1-cont_age
+oos_transform <- "3.2-1-no_vars- TRUE-10"
+data_transform_index <- which(colnames(data.for.survival)==oos_transform)
+data_specification_index <- which(modelnames=="spvl_model-1-0")
+
+oos_bestmodel <-lapply(data.for.survival[,data_transform_index], function(this_data){
+  output <- LinearSurvivalModel(
+    data=this_data,
+    return.modelobject=1,
+    spvl_method=index.survival.models$spvl_method[data_specification_index],
+    interaction=index.survival.models$interaction[data_specification_index],
+    bins=unlist(index.survival.models$bins[data_specification_index])
+  )
+  summary <- summary(output)$coefficients
+  return(data.table(summary, covariate=rownames(summary)))
+}
+)
+
+oos_bestmodel <- lapply(1:10, function(imp){
+  oos_bestmodel[[imp]][, imputation:=imp]
+})
+
+oos_bestmodel <- do.call("rbind", oos_bestmodel)
+setnames(oos_bestmodel, c("Estimate", "Std. Error"), c("beta", "se"))
+
+#run function that calculates summary means and standard errors for a dataset of combined model results
+source("summarize_models.r")
+oos_bestmodel_summary <- summarize_models(oos_bestmodel)
+oos_bestmodel<-list('lm'=oos_bestmodel_summary,'data'=data.for.survival,'name'=modelnames[data_specification_index],'data.name'=colnames(data.for.survival)[data_transform_index])
+save(oos_bestmodel,file=paste0(main_dir,'bestmodel_out_of_sample.rdata'))
