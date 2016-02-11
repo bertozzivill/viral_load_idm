@@ -1,4 +1,4 @@
-data.transform<-function(upper_bound=3.5,debias=1,impute_type='no_vars',impute.with.aids=T,imputation_count=2, surv){
+data.transform<-function(upper_bound=3.2,debias=1,impute_type='no_vars',impute.with.aids=T,imputation_count=2, surv){
 
   source('impute.R')
   print("imputing")
@@ -47,7 +47,7 @@ data.transform<-function(upper_bound=3.5,debias=1,impute_type='no_vars',impute.w
   #restrict event_num to equal either one or two (also to be a factor)
   if (!impute.with.aids) data <- lapply(data, function(x) x[, event_num:=2])
   lapply(data,function(x) x[, event_num:=ifelse(event_num<1.5, 1, 2)])
-  lapply(data,function(x) x[, event_num:= as.factor(event_num)])
+  lapply(data,function(x) x[, event_num:= factor(event_num, levels=c(1,2))])
   
   #if you've taken out the art observations: put them back
  if (!impute.with.aids){
