@@ -1,8 +1,12 @@
+
+#find the model specification with the lowest AIC, FROM the model with the lowest rubin error
+
+
 output.AIC<-function(survival.model.output,imputation_count){
   
   id=imputation_count
   k=length(survival.model.output)/id-1
-  output<-rep(list(NULL),nrow(index.survival.models));names(output)<-apply(index.survival.models,1,function(x) paste(x,sep=".",collapse="."))
+  output<-rep(list(NULL),nrow(index.survival.models));names(output)<-apply(index.survival.models,1,function(x) paste(x,sep="-",collapse="-"))
   
   for (model in 1:length(output))
   {

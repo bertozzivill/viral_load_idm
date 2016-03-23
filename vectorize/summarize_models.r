@@ -1,3 +1,17 @@
+####################################################################################################
+## Author: Amelia Bertozzi-Villa
+## Description: TODO : expand this function to do everything we want:
+##    
+
+## Input:  TODO
+##                    
+## Output: 
+##
+## Run from within the "vectorize" folder!
+####################################################################################################
+
+
+
 summarize_models <- function(bestmodel){
   mean_bestmodel <- bestmodel[, list(beta=mean(beta)), by="covariate"] 
   

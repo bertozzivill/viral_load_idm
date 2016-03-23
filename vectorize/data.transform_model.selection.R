@@ -69,7 +69,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
   colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
   
   #names(out)<-paste0('imputed_data: ',"upper bound=", upper_bound," | debias=", debias," | impute_type=",impute_type,"| impute.with.aids=", impute.with.aids," || imputation_number=",1:imputation_count)
-  save(data.for.survival, file=paste0(main_dir, "imputed_survival_data.rdata"))  
+  save(data.for.survival, index.data.transform, file=paste0(main_dir, "imputed_survival_data.rdata"))  
 
   ############################################################################################################
   ## loop over survival models, per data transform and multiple imputations
@@ -81,6 +81,8 @@ load(paste0(main_dir, "prepped_data.rdata"))
                               bins=list(0,c(seq(15,60,15),100),c(15,20,30,40,100)))
   
   index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
+  
+  save(index.data.transform, index.survival.models, file=paste0(main_dir, "indexes.rdata"))
   
   source("LinearSurvivalModel.R")
   load(file=paste0(main_dir,"imputed_survival_data.rdata"))
