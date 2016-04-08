@@ -6,7 +6,7 @@ rubin.method<-function(survival.model.output,imputation_count,output.type=c('err
   m=imputation_count
   k=length(survival.model.output)/m-1
   output<-rep(list(NULL),nrow(index.survival.models))
-  names(output)<-apply(index.survival.models,1,function(x) paste(x,sep=".",collapse="."))
+  names(output)<-apply(index.survival.models,1,function(x) paste(x,sep=".",collapse="-"))
   
   print(paste0("Rubins's method for ",imputation_count," imputations...using fixed effect estimates and se...returning ",output.type, " of t-test"))
   for (model in 1:length(output)){

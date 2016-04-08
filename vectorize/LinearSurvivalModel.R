@@ -1,6 +1,6 @@
 LinearSurvivalModel<-function(data,
                               spvl_method='spvl_model',
-                              interaction=0,
+                              interaction_type="two_way",
                               bins=c(seq(15,65,10),100),
                               return.modelobject=0){
   
@@ -19,19 +19,20 @@ LinearSurvivalModel<-function(data,
          paste0(" and age bins ", paste(bins,collapse=' ')),
          ' and continous age covariate')
          
-  print(paste0('SURVIVAL: ',"log normal survival with ",spvl_method,c(' without interaction',' with interaction')[interaction+1],binning))
+  print(paste0("SURVIVAL: ","log normal survival with ",spvl_method, ", interaction type ", interaction_type,binning))
   
-  if (interaction==1&length(bins)>1&length(levels(data$event_num))>1){formula <- paste0("observed_survival~  (agebin + ",spvl_method,")^2 + event_num")}
-  if (interaction==1&length(bins)>1&length(levels(data$event_num))==1){formula <- paste0("observed_survival~  (agebin + ",spvl_method,")^2")}
+  age_str <- ifelse(length(bins)>1, "agebin", "agesero")
   
-  if (interaction==1&length(bins)==1&length(levels(data$event_num))>1){formula <- paste0("observed_survival~  (agesero + ",spvl_method,")^2 + event_num")}
-  if (interaction==1&length(bins)==1&length(levels(data$event_num))==1){formula <- paste0("observed_survival~  (agesero + ",spvl_method,")^2")}
+  #specify formula
+  if (interaction_type=="none"){
+    formula = paste("observed_survival ~ ", age_str, "+", spvl_method, "+ event_num")
+  }else if (interaction_type=="two_way"){
+    formula = paste("observed_survival ~ (", age_str, "+", spvl_method, ")^2 + event_num")
+  }else if (interaction_type=="three_way"){
+    formula = paste("observed_survival ~ (", age_str, "+", spvl_method, "+ event_num)^3")
+  }
   
-  if (interaction==0&length(bins)>1&length(levels(data$event_num))>1){formula <- paste0("observed_survival~  agebin + ",spvl_method," + event_num")}
-  if (interaction==0&length(bins)>1&length(levels(data$event_num))==1){formula <- paste0("observed_survival~  agebin + ",spvl_method)}
-  
-  if (interaction==0&length(bins)==1&length(levels(data$event_num))>1){formula <- paste0("observed_survival~  agesero + ",spvl_method," + event_num")}
-  if (interaction==0&length(bins)==1&length(levels(data$event_num))==1){formula <- paste0("observed_survival~  agesero + ",spvl_method)}
+  print(formula)
 
   ###evaluate model
   output <- lm(as.formula(formula), data=data)
