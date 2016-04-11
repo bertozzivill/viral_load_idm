@@ -36,7 +36,7 @@ cv_jid <- lapply(1:10, function(iteration){
           print(paste("iteration", iteration, "split", split))
           
           #submit job/get id for main modeling step
-          split_jid <- qsub(code = "data.transform_model.selection.R",
+          split_jid <- qsub(code = "_run_all_data_transform_model_selection.r",
                        name= paste0("cv_", iteration, "_", split),
                        arguments = c(new_dir),
                        slots=5)

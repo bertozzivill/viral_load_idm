@@ -161,16 +161,16 @@ alldata <- merge(data, viral, by="patient_id")
 aids_death_subset <- unique(alldata[aids_indic==1 & death_indic==1 & art_indic==0, list(patient_id, aids_date, death_date)])
 aids_death_subset[, aids_death_time:=as.numeric((death_date-aids_date)/365)]
 histo <- ggplot(aids_death_subset, aes(x=aids_death_time)) +
-                geom_bar(fill="black", alpha=0.7) +
+                geom_density(fill="black", alpha=0.7) +
                 labs(title="Time between AIDS and death, uncensord CASCADE patients",
                      x="Time from AIDS to death, years")
 
 print(histo)
 
 
-#create event_type deathwithaids, NOT including individuals whose time from AIDS to death is longer than 2 years
+#create event_type deathwithaids, assign to "death" with appropriate death data. note that this excludes individuals who go on treatment at any point.
 alldata[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
-alldata[deathwithaids_indic==1 & as.numeric((death_date-aids_date)/365)>2, deathwithaids_indic:=0] #exclude aids-death times over 2 years
+#alldata[deathwithaids_indic==1 & as.numeric((death_date-aids_date)/365)>2, deathwithaids_indic:=0] #exclude aids-death times over 2 years
 alldata[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
 alldata[deathwithaids_indic==1, event_date:=death_date]
 
@@ -198,11 +198,9 @@ alldata <- alldata[visit_time>=0 & event_time>0 & event_timeNew>0]
 # drop visits after event
 alldata <- alldata[visit_date<event_date]
 
+#keep only those with at least 2 vl counts
 alldata[, vl_obs_count:=sum(!is.na(vl)), by="patient_id"]
 alldata <- alldata[vl_obs_count>1]
-
-
-
 
 #save full dataset
 save(alldata, file="alldata.rdata")
