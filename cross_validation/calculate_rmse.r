@@ -18,11 +18,10 @@ library(lme4)
 library(reshape2)
 #library(Metrics)
 
-#main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/cross_validation/1/1/"
-
 main_dir <- commandArgs()[3]
-
-  #load models  and data
+#main_dir <- "/ihme/scratch/users/abertozz/vl_cross_validation/1/1/"
+ 
+ #load models  and data
   print("loading data")
   load(paste0(main_dir, "survival_model_output.rdata"))
   load(paste0(main_dir, "test_data.rdata"))
@@ -44,12 +43,9 @@ main_dir <- commandArgs()[3]
   #fill this array with the RMSE's you find.
   all_rmse <- array(dim=c(nrow(index.data.transform), nrow(index.survival.models), imputation_count))
   
-  #give the array reasonable names
-  name_columns <- data.table(copy(index.survival.models))
-  name_columns[, agetype:= ifelse(bins[[1]]==0, "cont_age", "binned_age")]
-  name_columns[, bins:=NULL]
+  #name the array
   rownames(all_rmse)<-apply(index.data.transform,1,function(x) paste0(x,collapse="-"))
-  colnames(all_rmse) <- apply(name_columns,1,function(x) paste0(x,collapse="-"))
+  colnames(all_rmse) <- apply(index.survival.models,1,function(x) paste0(x,collapse="-"))
   
   #loop through data transforms
   print("predicting and calculating rmse")
