@@ -9,8 +9,8 @@ setwd("../vectorize/")
 
 ## define qsub function
 qsub <- function(code, name="abertozz", arguments=NULL, hold=NULL, shell="r_shell.sh", slots=1,
-                 error_dir="/ihme/scratch/users/abertozz/logging/errors",
-                 output_dir="/ihme/scratch/users/abertozz/logging/output") {
+                 error_dir="/share/temp/sgeoutput/abertozz/errors",
+                 output_dir="/share/temp/sgeoutput/abertozz/output") {
   
   # format arguments and hold IDs
   if(!is.null(arguments)) arguments <- paste(paste("\"", arguments, "\"", sep=""), collapse=" ")
