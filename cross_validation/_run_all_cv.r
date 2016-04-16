@@ -39,13 +39,13 @@ cv_jid <- lapply(1:10, function(iteration){
           split_jid <- qsub(code = "_run_all_data_transform_model_selection.r",
                        name= paste0("cv_", iteration, "_", split),
                        arguments = c(new_dir),
-                       slots=5)
+                       slots=10)
           
           #submit rmse job once the main modeling job is done
           rmse_jid <- qsub(code = "../cross_validation/calculate_rmse.r",
                            name= paste0("rmse_", iteration, "_", split),
                            arguments = c(new_dir),
-                           slots=5,
+                           slots=10,
                            hold=split_jid)
         return(rmse_jid)
           

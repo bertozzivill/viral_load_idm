@@ -14,6 +14,7 @@ load(file=paste0(main_dir,"imputed_survival_data.rdata"))
 source("LinearSurvivalModel.R")
 
 survival.model.output<-list()
+print("running survival models")
 for (k in 1:length(data.for.survival)){
   data=data.table(data.for.survival[[k]])
   survival.model.output[[k]]<-mapply(LinearSurvivalModel,
@@ -24,4 +25,5 @@ for (k in 1:length(data.for.survival)){
 }
 
 #save regression outputs for cross-validation, as well as the index values telling you what each list element means
+print("saving imputed survival data")
 save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
