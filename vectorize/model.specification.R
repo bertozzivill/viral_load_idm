@@ -22,7 +22,7 @@ for (k in 1:length(data.for.survival)){
                                      interaction_type=index.survival.models$interaction_type,
                                      bins=index.survival.models$bins,
                                      MoreArgs=list(data=data))
-  colnames(survival.model.output) <- apply(index.survival.models,1, function(x) paste(x, collapse="-"))
+  colnames(survival.model.output[[k]]) <- apply(index.survival.models,1, function(x) paste(x, collapse="-"))
 }
 
 #generate names for this list

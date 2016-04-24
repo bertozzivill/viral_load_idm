@@ -49,9 +49,9 @@ index.data.transform<-expand.grid(upper_bound=c(2.9, 3.0, 3.1),
                                  debias=c(F,T),
                                  pre_1996_only=c(F,T),
                                  observed_only=c(F))
-observed.only.index <- expand.grid(upper_bound=c(NA), 
+observed.only.index <- expand.grid(upper_bound=c(2.9), 
                                    debias=c(T,F),
-                                   pre_1996_only=c(NA),
+                                   pre_1996_only=c(F),
                                    observed_only=c(T))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
