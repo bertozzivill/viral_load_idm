@@ -22,7 +22,16 @@ for (k in 1:length(data.for.survival)){
                                      interaction_type=index.survival.models$interaction_type,
                                      bins=index.survival.models$bins,
                                      MoreArgs=list(data=data))
+  colnames(survival.model.output) <- apply(index.survival.models,1, function(x) paste(x, collapse="-"))
 }
+
+#generate names for this list
+data_transform_names <- apply(index.data.transform,1, function(x) paste(x, collapse="-"))
+data_transform_names <- data.table(expand.grid(1:10, data_transform_names))
+data_transform_names <- data_transform_names[, list(Var2, imp=paste0("imp_count_",Var1))]
+data_transform_names <- apply(data_transform_names, 1, function(x) paste(x, collapse="-"))
+names(survival.model.output) <- data_transform_names
+
 
 #save regression outputs for cross-validation, as well as the index values telling you what each list element means
 print("saving imputed survival data")
