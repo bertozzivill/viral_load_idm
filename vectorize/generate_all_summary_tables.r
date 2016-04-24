@@ -44,7 +44,7 @@ load(paste0(main_dir, "indexes.rdata"))
 #run all models
 print ("running survival models")
 
-# fill a datase named list with model outputs
+# fill a named list with model outputs
 imputation_count <- unique(index.data.transform$imputation_count)
 model_spec_names <- apply(index.survival.models,1,function(x)paste(x, collapse="-"))
 

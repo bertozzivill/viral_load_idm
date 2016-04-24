@@ -20,12 +20,8 @@ library(data.table)
 library(reshape2)
 library(ggplot2)
 require(bit64)
-setwd("C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/code/")
-#setwd("C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/code")
-#setwd("/home/cselinger/HIV-Cascade/merge/bertozzivill.viral_load_idm")
 
-main_dir <- ("../data/")
-setwd(main_dir) 
+main_dir <- ("C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
 
 #################################################################
 # I. import data
@@ -41,7 +37,7 @@ data <- lapply(names(files), function(fname){
   print(fname)
   cols<-files[[fname]]
   #import<-fread(paste0("CASCADE/", fname, ".csv"))
-  import<-fread(paste0("raw_data/", fname, ".csv"))
+  import<-fread(paste0(main_dir, "raw_data/", fname, ".csv"))
   import[, eval(parse(text=cols))] #keep only the columns we want, and change the names
 })
 
@@ -146,19 +142,10 @@ data<- data[serocon_age>=15]
 #drop those with an infection mode other than 1 or 6
 data<- data[inf_mode==1 | inf_mode==6]
 
-#########################################################################################
-# III. Merge vl and individual together
-#  -- check how many are lost in the merge
-#  -- check how many are lost by removing vl visits before serocon/after event
-#  -- check how many are lost by restricting to 2+ observations
-##########################################################################################
-
-alldata <- merge(data, viral, by="patient_id")
-
 # for individuals with both an AIDS and a death event, we want to assume the deaths were AIDS deaths and 
 # log their time-to-event as their time-to-death. To make sure this is a valid assumption (i.e. that people die
 # fairly soon after an AIDS diagnosis), we make a histogram of the time between aids and death.
-aids_death_subset <- unique(alldata[aids_indic==1 & death_indic==1 & art_indic==0, list(patient_id, aids_date, death_date)])
+aids_death_subset <- unique(data[aids_indic==1 & death_indic==1 & art_indic==0, list(patient_id, aids_date, death_date)])
 aids_death_subset[, aids_death_time:=as.numeric((death_date-aids_date)/365)]
 histo <- ggplot(aids_death_subset, aes(x=aids_death_time)) +
                 geom_density(fill="black", alpha=0.7) +
@@ -169,27 +156,41 @@ print(histo)
 
 
 #create event_type deathwithaids, assign to "death" with appropriate death data. note that this excludes individuals who go on treatment at any point.
-alldata[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
-#alldata[deathwithaids_indic==1 & as.numeric((death_date-aids_date)/365)>2, deathwithaids_indic:=0] #exclude aids-death times over 2 years
-alldata[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
-alldata[deathwithaids_indic==1, event_date:=death_date]
+data[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
+#data[deathwithaids_indic==1 & as.numeric((death_date-aids_date)/365)>2, deathwithaids_indic:=0] #exclude aids-death times over 2 years
+data[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
+data[deathwithaids_indic==1, event_date:=death_date]
 
-alldata[, visit_time:= as.numeric((visit_date - serocon_date)/365)]
-alldata[, event_time0:= as.numeric((event_date - serocon_date)/365)] #original "event time": time from recorded seroconversion to event
-alldata[, event_time1:= as.numeric((enroll_date - serocon_date)/365)] # "bias" factor: time from recorded seroconversion to enrollment (if it's positive, it's "bias")
-alldata[, event_time2:= as.numeric((event_date - enroll_date)/365)] # "corrected" event time: time from enrollment to event
+data[, event_time0:= as.numeric((event_date - serocon_date)/365)] #original "event time": time from recorded seroconversion to event
+data[, event_time1:= as.numeric((enroll_date - serocon_date)/365)] # "bias" factor: time from recorded seroconversion to enrollment (if it's positive, it's "bias")
+data[, event_time2:= as.numeric((event_date - enroll_date)/365)] # "corrected" event time: time from enrollment to event
 
 #seroconversion before enrollment may bias for individuals with longer survival
-alldata[,bias:=max(event_time1,0),by=rownames(alldata)]
-alldata[,aids_before_enroll:=as.factor(enroll_date>aids_date)]
-alldata[,seroconv_before_enroll:=as.factor(enroll_date>serocon_date)]
+data[,bias:=max(event_time1,0),by=rownames(data)]
+data[,aids_before_enroll:=as.factor(enroll_date>aids_date)]
+data[,seroconv_before_enroll:=as.factor(enroll_date>serocon_date)]
 #alldata[,censoring_before_enroll:=as.factor(enroll_date>mar_date+0)]
 
-alldata[,event_time:=event_time0]
-alldata[,event_timeNew:=event_time0]
+data[,event_time:=event_time0]
+data[,event_timeNew:=event_time0]
 
 #removing bias: substract survival times between seroconv and enroll, if seroconv was before enroll
-alldata[seroconv_before_enroll==TRUE,event_timeNew:=event_time2]
+data[seroconv_before_enroll==TRUE,event_timeNew:=event_time2]
+
+#########################################################################################
+# III. Merge vl and individual together
+#  -- check how many are lost in the merge
+#  -- check how many are lost by removing vl visits before serocon/after event
+#  -- check how many are lost by restricting to 2+ observations
+##########################################################################################
+
+alldata <- merge(data, viral, by="patient_id")
+
+#keep only those with at least 2 vl counts
+alldata[, vl_obs_count:=sum(!is.na(vl)), by="patient_id"]
+alldata <- alldata[vl_obs_count>1]
+
+alldata[, visit_time:= as.numeric((visit_date - serocon_date)/365)]
 
 #drop visits prior to seroconversion, and subjects whose event date precedes their seroconversion date (or enrollment date, if serocon<enroll)
 # (i.e. they started art before their first visit)
@@ -198,12 +199,8 @@ alldata <- alldata[visit_time>=0 & event_time>0 & event_timeNew>0]
 # drop visits after event
 alldata <- alldata[visit_date<event_date]
 
-#keep only those with at least 2 vl counts
-alldata[, vl_obs_count:=sum(!is.na(vl)), by="patient_id"]
-alldata <- alldata[vl_obs_count>1]
-
 #save full dataset
-save(alldata, file="alldata.rdata")
+save(alldata, file=paste0(main_dir,"alldata.rdata"))
 
 #################################################################
 # V. Split into relevant datasets, save
@@ -219,5 +216,8 @@ setkeyv(surv, NULL)
 surv <- unique(surv)
 write.csv(surv, file=paste0(main_dir, "surv.csv"), row.names=F)
 
+#################################################################
+# VI. Source code to prep covariates
+#################################################################
 
-
+source("prep_covariates.r")

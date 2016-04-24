@@ -43,12 +43,17 @@ load(paste0(main_dir, "prepped_data.rdata"))
 ############################################################################################################
 ## Run data transformations 
 ##############################################################################################################
+imputation_count <- 10
 
-index.data.transform=expand.grid(upper_bound=c(2.9, 3.0, 3.1),
-                                 debias=c(0,1),
-                                 impute_type=c("with_vars", "no_vars"),
-                                 impute.with.aids=c(F,T),
-                                 imputation_count=10)
+index.data.transform<-expand.grid(upper_bound=c(2.9, 3.0, 3.1),
+                                 debias=c(F,T),
+                                 pre_1996_only=c(F,T),
+                                 observed_only=c(F))
+observed.only.index <- expand.grid(upper_bound=c(NA), 
+                                   debias=c(T,F),
+                                   pre_1996_only=c(NA),
+                                   observed_only=c(T))
+index.data.transform <- rbind(index.data.transform, observed.only.index)
 
 source("data.transform.R")
 
@@ -57,9 +62,9 @@ source("data.transform.R")
 ##############################################################################################################
 
 index.survival.models<-expand.grid(
-  spvl_method=paste0('spvl_',c('model','fraser','hybrid')),
+  spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
-  bins=list(0,c(seq(15,60,15),100),c(15,20,30,40,100)))
+  bins=list(0))
 
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
 save(index.data.transform, index.survival.models, file=paste0(main_dir, "indexes.rdata"))

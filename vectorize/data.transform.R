@@ -14,18 +14,15 @@ source("TransformData.R")
 
 run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
 
-if(test.run!=0){index.data.transform<-index.data.transform[c(test.run),]}
-
 data.for.survival<-mapply(TransformData,
                           upper_bound=index.data.transform$upper_bound,
                           debias=index.data.transform$debias,
-                          impute_type=index.data.transform$impute_type,
-                          impute.with.aids=index.data.transform$impute.with.aids,
-                          imputation_count=index.data.transform$imputation_count,
+                          pre_1996_only=index.data.transform$pre_1996_only,
+                          observed_only=index.data.transform$observed_only,
                           MoreArgs=list(surv=surv)
 )
 
-rownames(data.for.survival)<-paste0("imputation_number=",c(1:index.data.transform$imputation_count[1]))
+rownames(data.for.survival)<-paste0("imputation_number=",c(1:imputation_count))
 colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
 
 save(data.for.survival, index.data.transform, file=paste0(main_dir, "imputed_survival_data.rdata"))  

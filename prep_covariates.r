@@ -129,5 +129,12 @@ surv <- merge(surv, re_vl[, list(patient_id, spvl_model=spvl)], by="patient_id",
 surv <- merge(surv, fraser_spvl, by="patient_id", all=T)
 surv <- merge(surv, hybrid_spvl, by="patient_id", all=T)
 
+#############################################
+## IV. Determine if event occurs before
+##     or after 1996
+#############################################
+cutoff <- as.Date("1996-01-01")
+surv[, pre_1996:= event_date<cutoff]
+
 save(surv, file=paste0(main_dir, "prepped_data.rdata"))
 
