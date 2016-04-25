@@ -16,8 +16,19 @@ library(data.table)
 library(reshape2)
 require(bit64)
 
-main_dir <- ("/ihme/scratch/users/abertozz/vl_cross_validation/")
+main_dir <- (ifelse(length(commandArgs())>2, commandArgs()[3], "/ihme/scratch/users/abertozz/vl_cross_validation/"))
 setwd(main_dir) 
+
+#delete extant files
+lapply(1:10, function(x) unlink(paste0(main_dir, x), recursive=T))
+
+#make new files
+lapply(1:10, function(x){
+  lapply(1:10, function(y){
+    dir.create(paste0(main_dir, x, "/", y), recursive = T)
+  })
+})
+
 
 #load all data 
 load("prepped_data.rdata")

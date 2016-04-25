@@ -29,6 +29,13 @@ qsub <- function(code, name="abertozz", arguments=NULL, hold=NULL, shell="r_shel
   return(as.numeric(strsplit(id, " ")[[1]][3]))
 }
 
+# prep cross validation
+prep_jid <- qsub(code="../cross_validation/prep_cross_validation.r",
+                 name="prep_cv",
+                 arguments=c(main_dir),
+                 slots=10)
+
+#run cross validation
 cv_jid <- lapply(1:10, function(iteration){
         iter_jid <- lapply(1:10, function(split){
           new_dir <-paste0(main_dir, iteration, "/", split, "/")
@@ -39,7 +46,8 @@ cv_jid <- lapply(1:10, function(iteration){
           split_jid <- qsub(code = "_run_all_data_transform_model_selection.r",
                        name= paste0("cv_", iteration, "_", split),
                        arguments = c(new_dir),
-                       slots=10)
+                       slots=10,
+                       hold=prep_jid)
           
           #submit rmse job once the main modeling job is done
           rmse_jid <- qsub(code = "../cross_validation/calculate_rmse.r",

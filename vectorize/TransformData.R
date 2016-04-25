@@ -19,6 +19,7 @@ TransformData<-function(upper_bound=3.2,debias=T,impute_type='with_vars',impute_
   # if running with observed events only, remove all mar events and return a list of the same format as the imputed datase
   if (observed_only){
     surv <- surv[event_type!="mar", list(patient_id, event_time, agesero ,observed_survival, event_num, spvl_model,spvl_fraser)]
+    surv[, event_num:=factor(event_num, levels=c(1,2))]
     reps <- lapply(1:imputation_count, function(x) return(surv))
     names(reps) <- paste0("imp", 1:imputation_count)
     print("returning without imputation")
