@@ -49,34 +49,34 @@ print(paste0("BEST PERFORMER: DATA TRANSFORMATION ",
              smallest5.mean.rubin.method.error
 ))
 
-#rerun bestmodel for ALL imputations, get combined coefficients/standard errors
-bestmodel<-lapply(data.for.survival[,delta.hat], function(this_data){
-  output <- LinearSurvivalModel(
-    data=this_data,
-    return.modelobject=1,
-    spvl_method=index.survival.models$spvl_method[mu.hat],
-    interaction_type=index.survival.models$interaction_type[mu.hat],
-    bins=unlist(index.survival.models$bins[mu.hat])
-  )
-  summary <- summary(output)$coefficients
-  return(data.table(summary, covariate=rownames(summary)))
-}
-)
-
-bestmodel <- lapply(1:10, function(imp){
-  bestmodel[[imp]][, imputation:=imp]
-})
-
-bestmodel <- do.call("rbind", bestmodel)
-setnames(bestmodel, c("Estimate", "Std. Error"), c("beta", "se"))
-
-#run function that calculates summary means and standard errors for a dataset of combined model results
-source("summarize_models.r")
-bestmodel_summary <- summarize_models(bestmodel)
-write.csv(bestmodel_summary, file=paste0(main_dir,"coefficients.csv", sep=''), row.names=F)
-
-bestmodel<-list('lm'=bestmodel_summary,'data'=data.for.survival,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
-save(bestmodel,file=paste0(main_dir,'bestmodel_in_sample.Rdata'))
+# #rerun bestmodel for ALL imputations, get combined coefficients/standard errors
+# bestmodel<-lapply(data.for.survival[,delta.hat], function(this_data){
+#   output <- LinearSurvivalModel(
+#     data=this_data,
+#     return.modelobject=1,
+#     spvl_method=index.survival.models$spvl_method[mu.hat],
+#     interaction_type=index.survival.models$interaction_type[mu.hat],
+#     bins=unlist(index.survival.models$bins[mu.hat])
+#   )
+#   summary <- summary(output)$coefficients
+#   return(data.table(summary, covariate=rownames(summary)))
+# }
+# )
+# 
+# bestmodel <- lapply(1:10, function(imp){
+#   bestmodel[[imp]][, imputation:=imp]
+# })
+# 
+# bestmodel <- do.call("rbind", bestmodel)
+# setnames(bestmodel, c("Estimate", "Std. Error"), c("beta", "se"))
+# 
+# #run function that calculates summary means and standard errors for a dataset of combined model results
+# source("summarize_models.r")
+# bestmodel_summary <- summarize_models(bestmodel)
+# write.csv(bestmodel_summary, file=paste0(main_dir,"coefficients.csv", sep=''), row.names=F)
+# 
+# bestmodel<-list('lm'=bestmodel_summary,'data'=data.for.survival,'name'=modelnames[mu.hat],'data.name'=colnames(data.for.survival)[delta.hat])
+# save(bestmodel,file=paste0(main_dir,'bestmodel_in_sample.Rdata'))
 
 # #do the same thing, but for the out-of-sample model: data transform 3.2-1-no_vars- TRUE-10 and model specification spvl_model-1-cont_age
 # oos_transform <- "3.2-1-no_vars- TRUE-10"

@@ -1,42 +1,36 @@
 LinearSurvivalModel<-function(data,
                               spvl_method='spvl_model',
-                              interaction_type="two_way",
-                              bins=c(seq(15,65,10),100),
-                              return.modelobject=0){
+                              interaction_type="none",
+                              include.age=T,
+                              return.modelobject=T){
   
-  bins<-unlist(bins)
-#  data<-data.table(data)
-#   print(paste0("type: ",typeof(data)))
-#   print(paste0("class: ",class(data)))
-  ###agebins for categorical variable
-  if(length(bins)>1){
-    data[,agebin:=cut(data$agesero, bins, include.lowest=TRUE)]
-  }
   
   ###arguments of function
-  
-  binning<-ifelse(length(bins)>1,
-         paste0(" and age bins ", paste(bins,collapse=' ')),
-         ' and continous age covariate')
          
-  print(paste0("SURVIVAL: ","log normal survival with ",spvl_method, ", interaction type ", interaction_type,binning))
+  print(paste0("SURVIVAL: ","log normal survival with ",spvl_method, ", interaction type ", interaction_type, " and ", ifelse(include.age, "age", "no age")))
   
-  age_str <- ifelse(length(bins)>1, "agebin", "agesero")
+  # if you have only spvl or age (but not both), make sure interaction_type is none
+  if (interaction_type!="none" & (spvl_method=="none" | include.age==F)){
+    stop(paste("interaction type is", interaction_type, ", but spvl method is", spvl_method, "and age is", ifelse(include.age, "included", "not included")))
+  }
+  
+  age_str <- ifelse(include.age, "agesero +", "")
+  spvl_str <- ifelse(spvl_method=="none", "", paste0(spvl_method, "+"))
   
   #specify formula
   if (interaction_type=="none"){
-    formula = paste("observed_survival ~ ", age_str, "+", spvl_method, "+ event_num")
+    model_formula <- paste("observed_survival ~ ", age_str, spvl_str, "+ event_num")
   }else if (interaction_type=="two_way"){
-    formula = paste("observed_survival ~ (", age_str, "+", spvl_method, ")^2 + event_num")
+    model_formula <- paste("observed_survival ~ (agesero +", spvl_method, ")^2 + event_num")
   }else if (interaction_type=="three_way"){
-    formula = paste("observed_survival ~ (", age_str, "+", spvl_method, "+ event_num)^3")
+    model_formula <- paste("observed_survival ~ (agesero +", spvl_method, "+ event_num)^3")
   }
   
-  print(formula)
+  print(model_formula)
 
   ###evaluate model
-  output <- lm(as.formula(formula), data=data)
-  if(return.modelobject==0){
+  output <- lm(as.formula(model_formula), data=data)
+  if(return.modelobject){
     return(list('lm'=output,'AIC'=round(AIC(output))))
   }else{
     return(output)

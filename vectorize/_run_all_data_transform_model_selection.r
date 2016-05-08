@@ -38,7 +38,7 @@ validation <- ifelse(length(commandArgs())>2, T, F)
 
 #load data
 load(paste0(main_dir, "prepped_data.rdata"))
-
+setnames(surv, "event_timeNew", "event_time_debiased")
 
 ############################################################################################################
 ## Run data transformations 
@@ -64,9 +64,16 @@ source("data.transform.R")
 index.survival.models<-expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
-  bins=list(0))
-
+  include.age=T)
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
+age.only <- list("none", "none", T)
+spvl.only <- expand.grid(
+  spvl_method=paste0('spvl_',c('model','fraser')),
+  interaction_type="none",
+  include.age=F
+)
+index.survival.models <- rbind(index.survival.models, age.only, spvl.only)
+
 save(index.data.transform, index.survival.models, file=paste0(main_dir, "indexes.rdata"))
 
 source("model.specification.R")
@@ -76,7 +83,7 @@ source("model.specification.R")
 ##############################################################################################################
 
 if (!validation){
- source("model.selection.in_sample.R") 
+ source("model.selection.in_sample.R")
 }
 
 

@@ -20,7 +20,7 @@ for (k in 1:length(data.for.survival)){
   survival.model.output[[k]]<-mapply(LinearSurvivalModel,
                                      spvl_method=index.survival.models$spvl_method,
                                      interaction_type=index.survival.models$interaction_type,
-                                     bins=index.survival.models$bins,
+                                     include.age=index.survival.models$include.age,
                                      MoreArgs=list(data=data))
   colnames(survival.model.output[[k]]) <- apply(index.survival.models,1, function(x) paste(x, collapse="-"))
 }
@@ -36,3 +36,5 @@ names(survival.model.output) <- data_transform_names
 #save regression outputs for cross-validation, as well as the index values telling you what each list element means
 print("saving imputed survival data")
 save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
+
+
