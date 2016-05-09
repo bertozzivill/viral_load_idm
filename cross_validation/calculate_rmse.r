@@ -28,7 +28,7 @@ main_dir <- commandArgs()[3]
   
   #only need the events from test data
   test_data <- test_data[event_type!="mar"]
-  test_data[, event_num:= factor(ifelse(event_type=="aids", 1, 2))]
+  test_data[, event_num:= factor(ifelse(event_type=="aids", 1, 0))]
   
   ##build rmse framework
   
@@ -68,10 +68,6 @@ main_dir <- commandArgs()[3]
         #print(model_info)
         
         this_model <- this_imputation["lm", model_index][[1]]
-        
-        #bin the test data into the appropriate age groups for predictions.
-        bins <- model_info$bins[[1]]
-        if (bins!=0) test_data[,agebin:=cut(test_data$agesero, bins, include.lowest=TRUE)]
         
         #predict
         test_data$predicted <- predict(this_model, newdata=test_data)
