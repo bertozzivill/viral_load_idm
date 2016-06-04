@@ -55,7 +55,7 @@ observed.only.index <- expand.grid(upper_bound=c(2.9),
                                    observed_only=c(T))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
-source("data.transform.R")
+#source("data.transform.R")
 
 ############################################################################################################
 ## Run Models 
@@ -70,8 +70,8 @@ age.only <- list("none", "none", T)
 spvl.only <- expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type="none",
-  include.age=F
-)
+  include.age=F)
+null.model <- list("none", "none", F)
 index.survival.models <- rbind(index.survival.models, age.only, spvl.only)
 
 save(index.data.transform, index.survival.models, file=paste0(main_dir, "indexes.rdata"))

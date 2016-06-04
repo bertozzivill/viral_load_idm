@@ -18,7 +18,7 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 library(stringr)
-source("plotting_code/multiplot.r")
+library(Rmisc)
 
 #automatically finds correct directory name so we can stop commenting and uncommenting lines
 dir.exists <- function(d) {
@@ -112,22 +112,22 @@ if (compute_summary){
   ## Load and merge error metrics
   ##-------------------------------
   
-  # get rubin error
-  load(paste0(main_dir, "rubin_method_error.rdata"))
-  mean_rubin <- data.frame(mean.rubin.method.error)
-  setnames(mean_rubin, names(mean.rubin.method.error))
-  mean_rubin$data_transform <- rownames(mean_rubin)
-  mean_rubin <- data.table(melt(mean_rubin, id.vars="data_transform", variable.name="model_spec", value.name="mean_rubin_error"))
-  summary.survival.model.summaries <- merge(summary.survival.model.summaries, mean_rubin, by=c("data_transform", "model_spec"), all=T)
-  
-  # get AIC
-  load(paste0(main_dir, "AIC.rdata"))
-  mean_aic <- data.frame(meanAIC)
-  setnames(mean_aic, names(meanAIC))
-  mean_aic$data_transform <- rownames(mean_aic)
-  mean_aic <- data.table(melt(mean_aic, id.vars="data_transform", variable.name="model_spec", value.name="mean_aic"))
-  summary.survival.model.summaries <- merge(summary.survival.model.summaries, mean_aic, by=c("data_transform", "model_spec"), all=T)
-  
+  # # get rubin error
+  # load(paste0(main_dir, "rubin_method_error.rdata"))
+  # mean_rubin <- data.frame(mean.rubin.method.error)
+  # setnames(mean_rubin, names(mean.rubin.method.error))
+  # mean_rubin$data_transform <- rownames(mean_rubin)
+  # mean_rubin <- data.table(melt(mean_rubin, id.vars="data_transform", variable.name="model_spec", value.name="mean_rubin_error"))
+  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, mean_rubin, by=c("data_transform", "model_spec"), all=T)
+  # 
+  # # get AIC
+  # load(paste0(main_dir, "AIC.rdata"))
+  # mean_aic <- data.frame(meanAIC)
+  # setnames(mean_aic, names(meanAIC))
+  # mean_aic$data_transform <- rownames(mean_aic)
+  # mean_aic <- data.table(melt(mean_aic, id.vars="data_transform", variable.name="model_spec", value.name="mean_aic"))
+  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, mean_aic, by=c("data_transform", "model_spec"), all=T)
+  # 
   
   # get RMSE from OOS file
   load(paste0(main_dir, "compiled_rmse.rdata"))
@@ -191,7 +191,6 @@ to_predict_template <- data.table(expand.grid(event_num=0,
 
 ages_to_keep <- c(15, 30, 45, 60)
 
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/regression_plots.pdf", width=8, height=15)
 #prediction function
 predict_results <- function(ranking_list, title="Predictions by Model", show_legend=T){
 
@@ -249,7 +248,7 @@ predict_results <- function(ranking_list, title="Predictions by Model", show_leg
   to_plot <- to_plot[spvl>=2 & spvl<=6.5 & event_num==0]
   
   result <- ggplot(data=to_plot, aes(x=spvl, y=time_to_event)) +
-      geom_point(data=to_plot[category=="data"], aes(color=binned_age), alpha=0.2) +
+      geom_point(data=to_plot[category=="data"], aes(color=binned_age), alpha=0.5) +
       geom_line(data=to_plot[category=="modeled"], aes(color=agesero), size=1) +
       facet_grid(.~ranking) +
       scale_color_discrete(name="Age at\nSeroconversion")+
@@ -261,53 +260,110 @@ predict_results <- function(ranking_list, title="Predictions by Model", show_leg
   
   return(result)
 }
-one <- predict_results(28:29, title="A", show_legend = F)
-two <- predict_results(1:3, title="B", show_legend=F)
-three <- predict_results(16, title="C")
 
-multiplot(one,two,three, layout=matrix(c(1,2,3,1,2,3,0,2,0), nrow=3))
+#pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_1.pdf", width=14, height=8)
 
+one <- predict_results(33:34, title="Non-Imputed Full")
+two <- predict_results(13:16, title="Non-Imputed Pre-96")
+three <- predict_results(20, title="Imputed Full")
+four <- predict_results(1:3, title="Imputed Pre-96")
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_1.pdf", width=10, height=6)
+  print(one)
+graphics.off()
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_2.pdf", width=14, height=8)
+print(two)
+graphics.off()
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_3.pdf", width=5, height=5)
+print(three)
+graphics.off()
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_4.pdf", width=11, height=7)
+print(four)
 graphics.off()
 
 
+print(two)
+print(three)
+print(four)
+
+
+#multiplot(one,two,three,four, layout=matrix(c(1,2,3,4,1,2,3,4,0,2,3,0, 0,2,0,0), nrow=4))
+
 #plot age at seroconversion in the three datasets
-reported_transforms <- unique(ranking[ranking %in% c(1,16,28), data_transform])
+reported_transforms <- unique(ranking[ranking %in% c(1,13,20,33), data_transform])
 reported_data <- lapply(reported_transforms, function(this_transform){
                     print(this_transform)
                     this_data <- data_list[[this_transform]]
                     this_data[, data_transform:=this_transform]
                     return(this_data)
 })
+
 reported_data <- rbindlist(reported_data)
 reported_data <- reported_data[, list(patient_id, agesero, observed_survival, spvl_model, event_num=as.numeric(as.character(event_num)), data_transform)]
 
-pre_96_ids <- unique(reported_data[data_transform=="3.1-1-1-0", patient_id])
-pre_96 <- reported_data[data_transform=="2.9-1-0-1" & patient_id %in% pre_96_ids]
-pre_96[, data_transform:="new"]
-
-reported_data <- rbind(reported_data, pre_96)
-
+#give data_transforms better names
+reported_data[, data_transform:= factor(data_transform, labels=c("Non-Imputed Full", "Non-Imputed Pre-96", "Imputed Full", "Imputed Pre-96"))]
+reported_data[, data_transform:= factor(data_transform, levels=c("Non-Imputed Pre-96", "Non-Imputed Full", "Imputed Pre-96","Imputed Full"))]
 
 agesero <- ggplot(reported_data[event_num==0], aes(x=agesero, y=observed_survival)) +
-            geom_point() +
-            facet_grid(~data_transform)
+            geom_point(alpha=0.5) +
+            facet_grid(~data_transform) +
+            labs(x="Age at Seroconversion", y="log(Survival Time)")
 
 spvl <- ggplot(reported_data[event_num==0], aes(x=spvl_model, y=observed_survival)) +
-          geom_point() +
-          facet_grid(~data_transform)
+          geom_point(alpha=0.5) +
+          facet_grid(~data_transform)+
+          labs(x="SPVL", y="log(Survival Time)")
         
 
-multiplot(agesero, spvl)
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_data.pdf", width=11, height=7)
+multiplot(spvl, agesero)
+graphics.off()
+
+#multiplot(agesero, spvl, layout=matrix(c(1,2,0,0, 1,2,0,0, 1,2,0,0), nrow=4))
 
 
+#plot secular trend of spvl
+surv[, serocon_year := as.numeric(format(serocon_date, "%Y"))]
+surv[, serocon_month:= as.numeric(format(serocon_date, "%m"))]
+surv[, serocon_time:= as.Date(paste0(serocon_year, "-", serocon_month, "-15"), origin="1970-01-01")]
+surv[, mean_spvl:=mean(spvl_model, na.rm=T), by="serocon_time"]
+mean_times <- unique(surv[,list(serocon_time, mean_spvl)])
+mean_times <- mean_times[order(serocon_time)]
 
-#plot real data along with it
+secular_trend <- gam(spvl_model~serocon_date, data=surv)
+
+dateseq <- seq(as.Date("1983-07-15"), as.Date("2014-01-28"), by="month")
+new_data <- data.table(serocon_date=dateseq)
+new_data[, predicted:= predict(secular_trend, newdata=new_data)]
+
+ggplot(new_data, aes(x=serocon_date, y=predicted)) +
+      geom_line()
 
 
+secular <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
+            geom_point(alpha=0.3) +
+            geom_smooth(size=2) +
+            labs(title="Secular Trend of SPVL: Conditional Mean",
+                 x="Seroconversion Date",
+                 y="SPVL")
+
+secular_hex <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
+  geom_hex(bins=50)+ 
+  labs(title="Secular Trend of SPVL:Density",
+       x="Seroconversion Date",
+       y="SPVL") +
+  theme(legend.position="none")
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/secular_trend.pdf", width=14, height=8)
+
+  print(secular)
 
 
-
-
+graphics.off()
 
 
 ggplot(surv[event_type=="death"], aes(x=agesero, y=event_timeNew)) +
