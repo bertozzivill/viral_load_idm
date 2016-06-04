@@ -55,7 +55,7 @@ observed.only.index <- expand.grid(upper_bound=c(2.9),
                                    observed_only=c(T))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
-#source("data.transform.R")
+source("data.transform.R")
 
 ############################################################################################################
 ## Run Models 
