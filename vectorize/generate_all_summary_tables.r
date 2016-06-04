@@ -44,7 +44,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
 imputation_count <- 10
 model_spec_names <- apply(index.survival.models,1,function(x)paste(x, collapse="-"))
 
-compute_summary <- F
+compute_summary <- T
 
 if (compute_summary){
   survival.model.summaries<- NULL

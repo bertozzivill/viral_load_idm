@@ -72,7 +72,7 @@ spvl.only <- expand.grid(
   interaction_type="none",
   include.age=F)
 null.model <- list("none", "none", F)
-index.survival.models <- rbind(index.survival.models, age.only, spvl.only)
+index.survival.models <- rbind(index.survival.models, age.only, spvl.only,null.model)
 
 save(index.data.transform, index.survival.models, file=paste0(main_dir, "indexes.rdata"))
 
