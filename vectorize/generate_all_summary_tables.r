@@ -19,6 +19,7 @@ library(reshape2)
 library(Amelia)
 library(stringr)
 library(Rmisc)
+library(xtable)
 
 #automatically finds correct directory name so we can stop commenting and uncommenting lines
 dir.exists <- function(d) {
@@ -44,7 +45,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
 imputation_count <- 10
 model_spec_names <- apply(index.survival.models,1,function(x)paste(x, collapse="-"))
 
-compute_summary <- T
+compute_summary <- F
 
 if (compute_summary){
   survival.model.summaries<- NULL
@@ -184,6 +185,101 @@ names(data_list) <- colnames(data.for.survival)
 ## Visualize
 ##-------------------------------
 
+## give data transforms and model specs beautiful names
+
+this_transform <- "2.9-1-1-0"
+return_full <- F
+
+name_transform <- function(this_transform, return_full=T){
+  this_transform <- as.list(strsplit(this_transform, split="-")[[1]])
+  names(this_transform) <- c("upper_bound", "debias", "pre_96", "no_impute")
+    
+  if (return_full){
+    this_name <- paste(ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed"),
+                       ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time"),
+                       ifelse(this_transform$debias=="1", "Debiased", "Nondebiased"),
+                       ifelse(this_transform$upper_bound=="2.9" & this_transform$no_impute=="0", "", paste("UB", this_transform$upper_bound)),
+                       sep="-")
+  }else{
+    this_name <- paste(ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed"),
+                       ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time"),
+                       sep="-")
+  }
+  
+  if (str_sub(this_name, -1,-1)=="-") this_name <- substr(this_name, 1, nchar(this_name)-1)
+
+return(this_name)
+}
+
+spec_transform <- function(this_spec, return_full=T){
+  this_spec <- as.list(strsplit(this_spec, split="-")[[1]])
+  names(this_spec) <- c("spvl_method", "interaction_type", "include.age")
+  
+  if (this_spec$spvl_method=="none"){
+    this_name <- ifelse(this_spec$include.age=="FALSE", "Null", "Age Only")
+  }else if (this_spec$include.age=="FALSE"){
+    this_name <- "SPVL Only"
+  }else{
+    this_name <- ifelse(this_spec$interaction_type=="none", "Main",
+                        ifelse(this_spec$interaction_type=="two_way", "Two Way", "Three Way"))
+  }
+  
+  if (return_full & this_spec$spvl_method!="none"){
+    this_name <- paste(this_name,
+                       ifelse(this_spec$spvl_method=="spvl_model", "Nonlinear SPVL", "Geometric SPVL"),
+                       sep="-")
+  }
+  
+  return(this_name)
+}
+
+full_names <- unlist(lapply(ranking$data_transform, name_transform))
+full_specs <- unlist(lapply(as.character(ranking$model_spec), spec_transform))
+
+ranking[, full_transform:=full_names]
+ranking[, full_spec:= full_specs]
+
+###heatmap of data tranforms and model specs, with color=rmse
+
+for_heatmap <- ranking[(full_spec %like% "Nonlinear" | !full_spec %like% "SPVL") & full_transform %like% "Debiased" &
+                         (full_transform %like% "UB 3.1" | full_transform %like% "Nonimputed")]
+
+short_names <- unlist(lapply(for_heatmap$data_transform, function(x){name_transform(x, return_full=F)}))
+short_spec <- unlist(lapply(as.character(for_heatmap$model_spec), function(x){spec_transform(x, return_full=F)}))
+for_heatmap[, short_transform:=short_names]
+for_heatmap[, short_specs:= short_spec]
+
+for_heatmap[, short_specs:= factor(short_specs, levels=c( "Null", "Age Only", "SPVL Only","Main", "Two Way", "Three Way"))]
+for_heatmap[, short_transform:= factor(short_transform, levels=rev(c("Imputed-Pre 1996", "Nonimputed-Pre 1996", "Imputed-Full Time", "Nonimputed-Full Time")))]
+setnames(for_heatmap, c("oos_rmse", "ranking"), c("RMSE", "Ranking"))
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=7, height=9)
+
+heatmap <- ggplot(for_heatmap, aes(x=short_specs, y=short_transform)) +
+            geom_tile(aes(fill=RMSE)) +
+            geom_text(aes(fill = RMSE, label = round(RMSE, 2))) +
+            scale_fill_gradient(low = "blue", high = "red") +
+            labs(title="RMSE by Data Transform and Model Specification",
+                 y="Data Transform",
+                 x="Model Specification")
+
+ranking_heatmap <- ggplot(for_heatmap, aes(x=short_specs, y=short_transform)) +
+                    geom_tile(aes(fill=Ranking)) +
+                    geom_text(aes(fill = Ranking, label=Ranking)) +
+                    scale_fill_gradient(low = "blue", high = "red") +
+                    labs(title="Ranking by Data Transform and Model Specification",
+                         y="Data Transform",
+                         x="Model Specification")
+
+multiplot(heatmap, ranking_heatmap)
+
+
+graphics.off()
+
+
+##line plots of predicted results and data
+
+
 ##generate data from which to predict
 to_predict_template <- data.table(expand.grid(event_num=0,
                                      agesero=seq(15, 100,5),
@@ -261,39 +357,77 @@ predict_results <- function(ranking_list, title="Predictions by Model", show_leg
   return(result)
 }
 
-#pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_1.pdf", width=14, height=8)
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/predictions.pdf", width=9, height=12)
 
-one <- predict_results(33:34, title="Non-Imputed Full")
-two <- predict_results(13:16, title="Non-Imputed Pre-96")
-three <- predict_results(20, title="Imputed Full")
-four <- predict_results(1:3, title="Imputed Pre-96")
-
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_1.pdf", width=10, height=6)
-  print(one)
-graphics.off()
-
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_2.pdf", width=14, height=8)
-print(two)
-graphics.off()
-
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_3.pdf", width=5, height=5)
-print(three)
-graphics.off()
-
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_4.pdf", width=11, height=7)
-print(four)
-graphics.off()
+imp_96 <- c(1:3, 10)
+nonimp_96 <- 13:16
+imp <- c(23, 28:30)
+nonimp <- c(37:38, 42:43)
+all_models <- c(imp_96, nonimp_96, imp, nonimp)
 
 
-print(two)
-print(three)
-print(four)
-
+one <- predict_results(imp_96, title="A: Imputed-Pre 96")
+two <- predict_results(nonimp_96, title="B: Nonimputed-Pre 96")
+three <- predict_results(imp, title="C: Imputed-Full Time")
+four <- predict_results(nonimp, title="D: Nonimputed-Full Time")
 
 #multiplot(one,two,three,four, layout=matrix(c(1,2,3,4,1,2,3,4,0,2,3,0, 0,2,0,0), nrow=4))
+multiplot(one,two,three,four)
 
-#plot age at seroconversion in the three datasets
-reported_transforms <- unique(ranking[ranking %in% c(1,13,20,33), data_transform])
+graphics.off()
+
+
+### better look at % change for agesero and spvl
+perc_table <- summary.survival.model.summaries[ranking %in% nonimp]
+perc_table <- perc_table[covariate %in% c("agesero", "spvl_model"), list(ranking, data_transform, model_spec, oos_rmse, covariate, effect_mean, effect_lower, effect_upper)]
+perc_table[,effect_mean:= ifelse(covariate=="agesero", effect_mean*1000, effect_mean*100)]
+perc_table[,effect_lower:= ifelse(covariate=="agesero", effect_lower*1000, effect_lower*100)]
+perc_table[,effect_upper:= ifelse(covariate=="agesero", effect_upper*1000, effect_upper*100)]
+
+### regression tables
+
+make_reg_table <- function(this_transform, this_caption="", this_label=""){
+  reg_table <- summary.survival.model.summaries[data_transform==this_transform & !model_spec %like% "fraser"]
+  reg_table <- reg_table[, list(model_spec, covariate, beta)]
+  spec_names <- unlist(lapply(as.character(reg_table$model_spec), function(x){spec_transform(x, return_full = F)}))
+  reg_table[, model_spec:= spec_names]
+  reg_table <- data.table(dcast(reg_table, covariate~model_spec))
+  
+  #format rows and columns
+  setnames(reg_table, "covariate", "Covariate")
+  setcolorder(reg_table, c("Covariate", "Null", "Age Only", "SPVL Only", "Main", "Two Way", "Three Way"))
+  
+  reg_table[, Covariate:= factor(Covariate, labels=c("Intercept", "Age at Seroconversion", "Age*I(AIDS)",
+                                                      "Age*SPVL", "Age*SPVL*I(AIDS)", "I(AIDS)", "SPVL",
+                                                      "SPVL*I(AIDS)"))]
+  
+  reg_table[, Covariate:= factor(Covariate, levels=c("Intercept", "I(AIDS)", "Age at Seroconversion",
+                                                     "SPVL", "Age*SPVL", "Age*I(AIDS)", "SPVL*I(AIDS)",
+                                                     "Age*SPVL*I(AIDS)"))]
+  reg_table <- reg_table[order(Covariate)]
+  this_table <- xtable(reg_table, caption=this_caption, label=this_label)
+  return(this_table)
+}
+
+make_reg_table("3.1-1-1-0", this_caption="Imputed-Pre 1996 Regression Outputs", this_label="reg_imp_96")
+make_reg_table("2.9-1-1-0", this_caption="Nonimputed-Pre 1996 Regression Outputs", this_label="reg_nonimp_96")
+make_reg_table("3.1-1-0-0", this_caption="Imputed-Full Time Regression Outputs", this_label="imp")
+make_reg_table("2.9-1-0-1", this_caption="Nonimputed-Full Time Regression Outputs", this_label="nonimp")
+
+
+
+### what's the mean difference in rmse between geometric and nonlinear spvl?
+test_diff <- ranking[model_spec %like% "spvl"]
+test_diff[, spvl_method:= ifelse(full_spec %like% "Nonlinear", "Nonlinear", "Geometric")]
+test_diff[, short_spec:= gsub("-(Nonlinear|Geometric) SPVL", "", full_spec)]
+test_diff[, full_model:=paste(full_transform, short_spec, sep="-")]
+test_diff <- data.table(dcast(test_diff, full_model~spvl_method, value.var="oos_rmse"))
+test_diff[, diff:= Geometric-Nonlinear]
+
+
+
+###plot age at seroconversion and spvl in the four datasets
+reported_transforms <- unique(ranking[ranking %in% all_models, data_transform])
 reported_data <- lapply(reported_transforms, function(this_transform){
                     print(this_transform)
                     this_data <- data_list[[this_transform]]
@@ -305,8 +439,8 @@ reported_data <- rbindlist(reported_data)
 reported_data <- reported_data[, list(patient_id, agesero, observed_survival, spvl_model, event_num=as.numeric(as.character(event_num)), data_transform)]
 
 #give data_transforms better names
-reported_data[, data_transform:= factor(data_transform, labels=c("Non-Imputed Full", "Non-Imputed Pre-96", "Imputed Full", "Imputed Pre-96"))]
-reported_data[, data_transform:= factor(data_transform, levels=c("Non-Imputed Pre-96", "Non-Imputed Full", "Imputed Pre-96","Imputed Full"))]
+reported_data[, data_transform:= factor(data_transform, labels=c("Nonimputed-Full Time", "Nonimputed-Pre 1996", "Imputed-Full Time", "Imputed-Pre 1996"))]
+reported_data[, data_transform:= factor(data_transform, levels=c("Nonimputed-Pre 1996", "Nonimputed-Full Time", "Imputed-Pre 1996","Imputed-Full Time"))]
 
 agesero <- ggplot(reported_data[event_num==0], aes(x=agesero, y=observed_survival)) +
             geom_point(alpha=0.5) +
@@ -319,14 +453,14 @@ spvl <- ggplot(reported_data[event_num==0], aes(x=spvl_model, y=observed_surviva
           labs(x="SPVL", y="log(Survival Time)")
         
 
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/results_data.pdf", width=11, height=7)
-multiplot(spvl, agesero)
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/agesero_spvl_data.pdf", width=11, height=7)
+  multiplot(spvl, agesero)
 graphics.off()
 
 #multiplot(agesero, spvl, layout=matrix(c(1,2,0,0, 1,2,0,0, 1,2,0,0), nrow=4))
 
 
-#plot secular trend of spvl
+###plot secular trend of spvl
 surv[, serocon_year := as.numeric(format(serocon_date, "%Y"))]
 surv[, serocon_month:= as.numeric(format(serocon_date, "%m"))]
 surv[, serocon_time:= as.Date(paste0(serocon_year, "-", serocon_month, "-15"), origin="1970-01-01")]
@@ -340,172 +474,28 @@ dateseq <- seq(as.Date("1983-07-15"), as.Date("2014-01-28"), by="month")
 new_data <- data.table(serocon_date=dateseq)
 new_data[, predicted:= predict(secular_trend, newdata=new_data)]
 
-ggplot(new_data, aes(x=serocon_date, y=predicted)) +
-      geom_line()
 
 
 secular <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
-            geom_point(alpha=0.3) +
-            geom_smooth(size=2) +
+            #geom_point(alpha=0.3) +
+            geom_smooth(size=2, color="red") +
             labs(title="Secular Trend of SPVL: Conditional Mean",
                  x="Seroconversion Date",
                  y="SPVL")
 
 secular_hex <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
   geom_hex(bins=50)+ 
+  geom_smooth(size=2, color="red")+
   labs(title="Secular Trend of SPVL:Density",
        x="Seroconversion Date",
        y="SPVL") +
   theme(legend.position="none")
 
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/presentation_figures/secular_trend.pdf", width=14, height=8)
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/secular_trend.pdf", width=8, height=10)
 
-  print(secular)
-
-
-graphics.off()
-
-
-ggplot(surv[event_type=="death"], aes(x=agesero, y=event_timeNew)) +
-  geom_point()
-
-ggplot(surv[event_type=="death"], aes(x=spvl_model, y=log(event_timeNew))) +
-  geom_point()
-
-
-
-#look at age distribution of deaths among entire dataset
-age_test <- data_list[["3.1-1-0-0"]]
-age_test[, binned_age:= cut(agesero, breaks=c(0,20, 40, 60, 80, 100), labels=c(0,20,40,60,80))]
-
-ggplot(age_test[as.numeric(as.character(event_num))==0], aes(x=spvl_model, y=exp(observed_survival), color=binned_age)) +
-      geom_point(aes(color=binned_age), alpha=0.2)
-
-#look at predicted results when only age is included in the model
-age_only <- summary.survival.model.summaries[ranking==13]
-betas <- age_only$beta
-names(betas) <- age_only$covariate
-names(betas)[[1]] <- "Intercept"
-betas <- as.list(betas)
-
-#predict (TODO: make this modifiable)
-to_predict <- copy(to_predict_template)
-to_predict[, predicted_time:= exp(betas$Intercept + event_num*betas$event_num1 + agesero*betas$agesero)]
-
-ages_to_keep <- c(20, 40, 60, 80)
-to_predict <- to_predict[agesero %in% ages_to_keep]
-to_predict[, agesero:= as.factor(agesero)]
-
-ggplot(to_predict[spvl>=2.5 & spvl<=7.5], aes(x=spvl, y=predicted_time, group=agesero)) +
-  geom_line(aes(color=agesero))
-
-#look at different mar events vs event time: linear in log space?
-ggplot(surv[event_type=="mar"], aes(x=spvl_model, y=log(event_timeNew))) +
-      geom_point(aes(color=event_detail), alpha=0.3)
-
-test <- surv[!is.na(spvl_model) & event_type=="mar"]
-test_lm <- lm(log(event_timeNew)~spvl_model,data=test)
-test$predict <- predict(test_lm, data=test)
-ggplot(test, aes(x=spvl_model)) +
-      geom_point(aes(y=log(event_timeNew), color=event_detail), alpha=0.1)
-
-#find mean within each spvl bin
-test[, spvl_bin := cut(spvl_model, breaks=-1:9, labels=-1:8)]
-test[, mean_surv:= mean(event_timeNew), by="spvl_bin"]
-
-ggplot(test[pre_1996==T], aes(x=spvl_model)) +
-  geom_point(aes(y=log(event_timeNew), color=event_detail), alpha=0.3)
-
-#look at different mar events vs event time: linear in log space?
-ggplot(surv[event_type=="mar"], aes(x=agesero, y=log(event_timeNew))) +
-  geom_point(aes(color=event_detail), alpha=0.1)
-
-
-#look at secular trend
-test[, year_enrolled := as.numeric(format(enroll_date, "%Y"))]
-test[, year_evented:= as.numeric(format(event_date, "%Y"))]
-ggplot(test, aes(x=spvl_model)) +
-  geom_point(aes(y=log(event_timeNew), color=event_detail), alpha=0.1)+
-  facet_wrap(~year_evented)
-
-
-#plot this all nice
-pdf(paste0(main_dir, "mar_plots.pdf"), width=15, height=8)
-
-#the whole cloud
-full <- ggplot(surv[event_type=="mar"], aes(x=spvl_model, y=log(event_timeNew))) +
-          geom_point(aes(color=event_detail), alpha=0.3) +
-          labs(title="SPVL vs log Time to Event, by MAR Type",
-               x="log10(spvl)",
-               y="log(years to event)")
-print(full)
-
-secular_by_enroll <- ggplot(test, aes(x=spvl_model)) +
-                    geom_point(aes(y=log(event_timeNew), color=event_detail), alpha=0.1)+
-                    facet_wrap(~year_enrolled) +
-                    labs(title="SPVL vs log Time to Event, by MAR Type and Year of Enrollment",
-                         x="log10(spvl)",
-                         y="log(years to event)")
-
-print(secular_by_enroll)
-
-secular_by_event <- ggplot(test, aes(x=spvl_model)) +
-                    geom_point(aes(y=log(event_timeNew), color=event_detail), alpha=0.1)+
-                    facet_wrap(~year_evented) +
-                    labs(title="SPVL vs log Time to Event, by MAR Type and Year of Event",
-                         x="log10(spvl)",
-                         y="log(years to event)")
-
-print(secular_by_event)
-
-#just pre-1996
-part <- ggplot(surv[event_type=="mar" & pre_1996==T], aes(x=spvl_model, y=log(event_timeNew))) +
-        geom_point(aes(color=event_detail), alpha=0.5) +
-        labs(title="SPVL vs log Time to Event, by MAR Type, Pre-1996 Only",
-             x="log10(spvl)",
-             y="log(years to event)")
-print(part)
-
-
-#also look at non-mar
-full_non_mar <- ggplot(surv[event_type!="mar"], aes(x=spvl_model, y=log(event_timeNew))) +
-                geom_point(aes(color=event_detail), alpha=0.5) +
-                labs(title="SPVL vs log Time to Event, by Event Type",
-                     x="log10(spvl)",
-                     y="log(years to event)")
-print(full_non_mar)
-
-part_non_mar <- ggplot(surv[event_type!="mar" & pre_1996==T], aes(x=spvl_model, y=log(event_timeNew))) +
-                geom_point(aes(color=event_detail), alpha=0.5) +
-                labs(title="SPVL vs log Time to Event, by Event Type, Pre-1996 Only",
-                     x="log10(spvl)",
-                     y="log(years to event)")
-print(part_non_mar)
-
+  multiplot(secular, secular_hex)
 
 graphics.off()
-
-
-
-
-##for number-plugging, find a breakdown of mar patients by mar type
-load(paste0(main_dir, "alldata.rdata"))
-alldata[, event_detail:=""]
-alldata[event_type=="mar" & art_indic==1, event_detail:="art"]
-alldata[event_type=="mar" & ltfu_date<art_start_date, event_detail:="ltfu"] #happens for two people
-alldata[event_type=="mar" & event_detail=="" & ltfu_indic==1, event_detail:="ltfu"]
-alldata[event_type=="mar" & event_detail=="", event_detail:="admin_censor"]
-alldata[event_detail=="", event_detail:= event_type]
-event_detail <- unique(alldata[, list(patient_id, event_detail)])
-sexes <- unique(alldata[, list(patient_id, sex, inf_mode)])
-
-
-#paste on to our final dataset
-surv <- merge(surv, event_detail, by="patient_id", all.x=T)
-surv <- merge(surv, sexes, by="patient_id", all.x=T)
-surv[, unlog_spvl_model:= 10^(spvl_model)]
-surv[, unlog_spvl_fraser:= 10^(spvl_fraser)]
-
 
 
 
