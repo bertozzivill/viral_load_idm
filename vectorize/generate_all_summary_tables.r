@@ -187,9 +187,6 @@ names(data_list) <- colnames(data.for.survival)
 
 ## give data transforms and model specs beautiful names
 
-this_transform <- "2.9-1-1-0"
-return_full <- F
-
 name_transform <- function(this_transform, return_full=T){
   this_transform <- as.list(strsplit(this_transform, split="-")[[1]])
   names(this_transform) <- c("upper_bound", "debias", "pre_96", "no_impute")
@@ -198,7 +195,7 @@ name_transform <- function(this_transform, return_full=T){
     this_name <- paste(ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed"),
                        ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time"),
                        ifelse(this_transform$debias=="1", "Debiased", "Nondebiased"),
-                       ifelse(this_transform$upper_bound=="2.9" & this_transform$no_impute=="0", "", paste("UB", this_transform$upper_bound)),
+                       ifelse(this_transform$upper_bound=="2.9" & this_transform$no_impute=="1", "", paste("UB", this_transform$upper_bound)),
                        sep="-")
   }else{
     this_name <- paste(ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed"),
@@ -357,6 +354,9 @@ predict_results <- function(ranking_list, title="Predictions by Model", show_leg
   return(result)
 }
 
+multiplot(predict_results(1:5), predict_results(6:10))
+
+
 pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/predictions.pdf", width=9, height=12)
 
 imp_96 <- c(1:3, 10)
@@ -388,23 +388,33 @@ perc_table[,effect_upper:= ifelse(covariate=="agesero", effect_upper*1000, effec
 
 make_reg_table <- function(this_transform, this_caption="", this_label=""){
   reg_table <- summary.survival.model.summaries[data_transform==this_transform & !model_spec %like% "fraser"]
-  reg_table <- reg_table[, list(model_spec, covariate, beta)]
+  reg_table <- reg_table[, list(model_spec, covariate, beta, lower, upper)]
+  reg_table[, uncert:= paste0("(", round(lower,2), ", ", round(upper,2), ")")]
+  reg_table[, beta:= as.character(round(beta,2))]
+  reg_table[, c("lower", "upper"):=NULL]
   spec_names <- unlist(lapply(as.character(reg_table$model_spec), function(x){spec_transform(x, return_full = F)}))
   reg_table[, model_spec:= spec_names]
-  reg_table <- data.table(dcast(reg_table, covariate~model_spec))
+  reg_table <- melt(reg_table, id.vars = c("model_spec", "covariate"))
+  reg_table <- data.table(dcast(reg_table, covariate+variable~model_spec))
+  
   
   #format rows and columns
   setnames(reg_table, "covariate", "Covariate")
-  setcolorder(reg_table, c("Covariate", "Null", "Age Only", "SPVL Only", "Main", "Two Way", "Three Way"))
+  setcolorder(reg_table, c("Covariate", "variable", "Null", "Age Only", "SPVL Only", "Main", "Two Way", "Three Way"))
   
-  reg_table[, Covariate:= factor(Covariate, labels=c("Intercept", "Age at Seroconversion", "Age*I(AIDS)",
+  reg_table[, Covariate:= factor(Covariate, labels=c("Intercept", "Age", "Age*I(AIDS)",
                                                       "Age*SPVL", "Age*SPVL*I(AIDS)", "I(AIDS)", "SPVL",
                                                       "SPVL*I(AIDS)"))]
   
-  reg_table[, Covariate:= factor(Covariate, levels=c("Intercept", "I(AIDS)", "Age at Seroconversion",
+  reg_table[, Covariate:= factor(Covariate, levels=c("Intercept", "I(AIDS)", "Age",
                                                      "SPVL", "Age*SPVL", "Age*I(AIDS)", "SPVL*I(AIDS)",
                                                      "Age*SPVL*I(AIDS)"))]
   reg_table <- reg_table[order(Covariate)]
+  
+  reg_table[, Covariate:=as.character(Covariate)]
+  reg_table[variable=="uncert", Covariate:=NA]
+  reg_table[, variable:=NULL]
+  
   this_table <- xtable(reg_table, caption=this_caption, label=this_label)
   return(this_table)
 }
