@@ -1,0 +1,311 @@
+\documentclass[12pt, titlepage, proquest]{article}
+\setlength{\parskip}{\baselineskip}%
+\setlength{\parindent}{0pt}%
+
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{rotating}
+
+\usepackage{setspace}
+\doublespacing
+
+\usepackage[margin=1.0in]{geometry}
+\graphicspath{ {../paper_figures/}}
+
+\usepackage[backend = bibtex,
+        style = numeric-comp,
+        sorting = none,
+        natbib = true,
+        doi = false,
+        isbn = true,
+        hyperref = true]{biblatex}
+\makeatletter
+\def\blx@maxline{77}
+\makeatother
+\addbibresource{bibliography.bib}
+
+\begin{document}
+
+\pagenumbering{gobble} %suppress page number for copyright and abstract pages
+
+\input{titlepage.tex}
+
+    \vspace{7pc}
+    \begin{center}
+      \textcopyright Copyright 2016 \\
+      Amelia Bertozzi-Villa
+    \end{center}
+
+\newpage
+
+\textbf{Abstract}
+
+\textbf{Introduction:} Prediction of off-treatment HIV survival is important in understanding risk among individuals unaware of their HIV status or unable to access care. Historically HIV survival analyses use age at seroconversion or set point viral load (SPVL) as their predictor of interest, but the relationships and interactions between these two covariates has yet to be rigorously determined.
+
+\textbf{Methods:} We utilized the CASCADE seroconverters dataset, composed of 17,000 eligible participants. Two specifications of SPVL were tested: a geometric mean and a nonlinear modeling method. We tested 16 data transformations, including subsetting the data to pre-1996 only and imputing censored survival times. Our main model was a log-linear regression with time to death (from seroconversion) as the dependent variable and age at seroconversion, SPVL, and an AIDS censorship indicator as the independent variables. We tested five variations on this specification, including a null model, excluding age, excluding SPVL, including a two-way age-SPVL interaction, and including a three-way age-SPVL-AIDS indicator interaction. All models were validated and ranked using 10x 10-fold cross-validation with root mean squared error (RMSE) as the error metric. 
+
+\textbf{Results:} Of the 160 models considered, average RMSE was 4.72 years (range 4.25, 5.11). Models without SPVL performed barely better than the null models. The best-performing model was fit using the imputed pre-1996 dataset and the main model specification, and predicted a 25.4\% (95\% CI 17.6, 32.4) decrease in survival per log10 increase in set-point viral load, and a 0.07\% (-6.68, 6.77) decrease in survival for every decade of age at seroconversion. Such a strong impact of SPVL on survival time could have serious implications on mortality for at-risk groups, especially since population-level SPVL has been increasing since the early years of the epidemic.
+
+\textbf{Conclusion:} Our analysis showed that SPVL was more predictive of survival than age at seroconversion. We did not find significant effect of the interaction between the two. Our work highlights the importance of targeting and treating at-risk populations quickly to avoid adverse effects from globally increasing set point viral loads.
+
+\newpage
+
+\pagenumbering{arabic}
+
+\section{Introduction}
+
+The sweeping rollouts of antiretroviral therapy (ART) and HIV prevention methods have saved an estimated 19.1 million life-years since the start of the epidemic \cite{murray_global_2014}. However, access to treatment is still limited in many areas \cite{unaids_access_2013}, and while the WHO's recommendation to universally test and treat the HIV+ expands access to care for millions, it also adds stress to already-strained health infrastructures. For this reason, the question of what drives off-treatment survival remains a salient one. 
+
+Much emphasis has been put on age at seroconversion as a predictor of survival time in HIV survival analyses \cite{asher_characteristics_2016, todd_time_2007, babiker_age_2001, _time_2000, davis_early_2013,han_hiv_2015,justice_predictive_2013,legarth_long-term_2016,poorolajal_predictors_2015}. Generally, adults who seroconvert at older ages are observed to face worse outcomes and shorter survival times than those who seroconvert when younger. A less commonly used predictor of survival is a metric known as set-point viral load (SPVL) \cite{sterling_initial_2001,de_wolf_aids_1997,pantazis_bivariate_2005,lavreys_higher_2006,chirouze_viremia_2015,arnaout_simple_1999}. The concept of SPVL comes from natural history models of viral load HIV infection \cite{an_host_2010}, which describe a period of swift increase in viral load immediately after seroconversion (acute phase) followed by a steep decline as the adaptive immune response attacks the virus. Next come years of relatively low viral load (asymptomatic phase), until viral levels increase to the point of a clinical AIDS infection. Some summary measure of viral load during the asymptomatic phase is commonly referred to as the 'set point'. SPVL has been shown to vary widely between individuals due to both transmitted strain and host immune response\cite{fraser_variation_2007}, and higher levels of SPVL have correlated with survival times in the studies cited above. There is, however, no standard for how SPVL should be defined. Many assume that viral load stays roughly constant over much of the asymptomatic phase, and estimate SPVL as a geometric or arithmetic mean of values \cite{fraser_variation_2007,arnaout_simple_1999}. Others approximate the same idea by just the first or second viral load sampled after seroconversion \cite{lavreys_higher_2006}. Yet others argue that the assumption of a near-constant viral load value is erroneous, and that viral load is better modeled as a linear increase over the course of the asymptomatic phase \cite{vidal_lack_1998}. 
+
+While age at seroconversion and viral load have often been used separately as predictors in HIV survival models, very few studies \cite{chirouze_viremia_2015,sterling_initial_2001} have tested them both together, and none have explored in depth the effect of interacting the two variables, or tested the sensitivity of SPVL specification in the contest of an age-SPVL off-treatment survival model. In this analysis, we address these questions using the collection of seroconverter studies known as the CASCADE dataset. 
+
+\section{Methods}
+
+\subsection{Data and Data Transformations}
+Concerted Action on SeroConversion to AIDS and Death in Europe (CASCADE) is a collaboration of 28 cohort studies whose participants have well-estimated dates of HIV seroconversion. We used data from 26 of these cohorts, two from sub-Saharan Africa and the remainder from Europe, Canada, or Australia.  Data were pooled on November 26, 2014. All collaborating cohorts received approval from their regulatory or national ethics review boards.
+
+The full dataset includes 31,772 individuals. After excluding participants who seroconverted when younger than 15, those infected by nonsexual means, those with fewer than two viral load measurements, and those with nonsensical event recording (e.g. seroconversion dates in 1911), the final sample included 16,964 participants (Figure \ref{consort}). The focus of this study is time to death for those who never experienced treatment, but we witness only 173 such deaths-- the remainder were censored by treatment initiation, loss to follow-up, or study termination.
+
+
+\begin{figure}
+	\caption{CONSORT diagram for data inclusion in analysis.}
+	\label{consort}
+	\centering
+		\includegraphics[scale=0.93]{consort_diagram}
+\end{figure}
+
+Most of these censorship events can be considered missing-at-random (MAR), meaning that the mechanism by which individuals are censored does not depend on the outcome of interest (here, time to death). For example, the termination date of a study does not generally depend on the outcomes of individuals in that study. A clear occasion when this assumption does not hold true for the data at hand is when an individual was diagnosed with AIDS prior to censorship. Because AIDS diagnosis indicates that one is extremely ill, any censorship event following such a diagnosis must be considered missing not at random (MNAR). The term "AIDS event" is used to refer to such individuals throughout this paper.
+
+Thus, we split our final dataset into three categories: 173 death events, which include any never-treated death captured in the study (with our without a prior AIDS diagnosis); 470 AIDS events, described above and censored at time of AIDS diagnosis; and 16,321 MAR events censored at treatment initiation (12,137), LTFU (1,595), or administrative censorship (2,589), whichever came earliest (Figure \ref{consort}). Under the assumptions of missingess-at-random, this latter group can be excluded from analysis without generating bias, but at the expense of statistical power. The alternative is to use an imputation algorithm to estimate time-to-death for the MAR group. We test both options, running all analyses on both a small non-imputed group (only death and AIDS events) and a large, fully-imputed dataset. We used the AMELIA II software package in R \cite{honaker_amelia_2015} to impute event time (for more details see Appendix). Additionally, we tested the following data  transformations:
+
+\begin{itemize}
+	\item Pre-1996: Beginning in 1996, the triple-drug regimen known as highly-active antiretroviral therapy (HAART) became widely available. This marked a fundamental shift in the way HIV+ individuals accessed and considered their care. We reran all analyses on a subset of the two datasets described above consisting only of individuals whose pre-imputation events were prior to 1996. Note that this could lead to imputed death dates after 1996, but informed only using data from the pre-1996 era.
+
+	\item Debiasing: in most cases, participants enroll in CASCADE cohorts after seroconversion, and seroconversion date is established using estimation methods well-documented elsewhere \cite{_time_2000}. However, this method of study inclusion generates survivorship bias: those who enroll in the study mus already have survived long enough to be in the cohort, and as such may be predisposed to a longer life. We tested two versions each of the four datasets described above: one with seroconversion dates as determined by CASCADE, and one with enrollment date substituted for seroconversion date if individuals seroconverted prior to enrollment. 
+	
+	\item Upper bound for imputation: If imputation predictions are left unbounded, AMELIA II will occasionally predict either a too-short event time (before the censored individual's last appointment) or an infeasibly long event time. The lower bound for each individual is always his/her last logged encounter with the health system, but we tested the effect of three different upper bounds, ranging from 18 to 22.2 years. (The longest off-treatment time-to-death in our dataset is 17.9 years). These three upper bounds were tested  on each of the four imputed datasets described above (full time series, pre-1996, full time series debiased, and pre-1996 debiased).
+
+\end{itemize}
+
+Our final analysis thus included 16 datasets: four non-imputed, and twelve imputed. The following models specifications were tested on each of them.
+
+\subsection{Model Specification}
+
+At its core, our model is a log-linear regression with time-to-event (from seroconversion) as the dependent variable and age at seroconversion and SPVL as the independent variables. Since the AIDS event censorships described in the previous section are not MAR and thus cannot be imputed, they are accounted for directly by an indicator variable within the model: 
+
+\begin{equation}
+	log(time\ to\ event) = \beta_{0} + \beta_{1}age + \beta_{2}SPVL + \beta{3}I(AIDS) + \epsilon
+\end{equation}
+
+We tested five variations on this central model (Table \ref{model_specs}): a null model (only intercepts for each event type), excluding age, excluding SPVL, a two-way interaction between age at seroconversion and SPVL, and a three-way interaction between age, SPVL, and event type. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lcccccc}
+  \hline
+  Model Term & Null & Age-Only & SPVL-Only & Central & Two Way & Three Way \\ \hline
+  Intercept & X & X & X & X & X & X \\ 
+  I(AIDS) & X & X & X & X & X & X \\ 
+  Age & & X & & X & X & X \\ 
+  SPVL & & & X & X & X & X \\ 
+  Age*SPVL & & & & & X & X \\ 
+  Age*I(AIDS) & & & & & & X \\ 
+  SPVL*I(AIDS) & & & & & & X \\ 
+  Age*SPVL*I(AIDS) & & & & & & X \\ 
+  \hline
+\end{tabular}
+\caption{Model Specifications} 
+\label{model_specs}
+\end{table}
+
+Since there is no standard for measuring SPVL, we tested three methods of determining the SPVL metric: a simple geometric mean from 6 months after seroconversion until the event, a more complex nonlinear regression method, and a hybrid of the two (see Appendix). The hybrid method produced results almost identical to the geometric mean method and was not included in further analysis. Thus, every model in Table 1 that included SPVL was tested twice, for a total of 10 model specifications. 
+
+\subsection{Validation}
+
+To determine which of the 160 models described above (10 model specifications x 16 data transformations) is most predictive, we ran 10x 10-fold cross-validation using root mean squared error (RMSE) as the error metric. Note that the data for cross-validation was split into testing and training sets prior to imputation, and error calculated based only on observed death/AIDS events. This substantially reduces the number of testable events in each testing set, but ensures that the values in those sets remain unused by any part of the modeling process. 
+
+
+\section{Results}
+
+\subsection{Data}
+Of the 16,964 individuals included in our analysis, 14,133 were men and 2,830 were women. 12,335 men and 1 woman were infected through homosexual interactions, the remainder through heterosexual encounters. Mean age at seroconversion was 33.7 years (range 15.5-79.3). Mean SPVL for the geometric mean method was 4.31 log10(viral copies/mL) of blood (range 1.07, 7.71) and for the nonlinear model method was 4.31 (-0.48, 7.40). Debiasing (setting seroconversion time equal to enrollment time) was performed for 13,374 individuals who seroconverted before their study enrollment, with an average change of 0.89 years (range 0.00274, 24.0).
+
+The pre-1996 subset consisted of 376 individuals. In this subset, 33 (8.8\%) seroconverters had logged death events, 54 (14.4\%) had AIDS events only, and 289 (76.9\%) were missing at random.  83.7\% of the 289 missing at random events were treatment initiation, compared to 74.4\% in the sample as a whole. However, these treatment initiation events must be considered fundamentally different from those that came after 1996, as they would have consisted of one or two early-stage drugs, rather than the triple-drug therapy that came to be common.
+
+\subsection{Models}
+A total of 160 models were considered, with an average RMSE of 3.56 years (range 3.16, 3.98). There are clear patterns in the performance of different data-transformation-model specification combinations (Figure \ref{heatmap}). The best-performing models utilize the nonlinear SPVL covariate, have no more than a two-way interaction, and utilize data subset prior to 1996. The worst-performing models utilize the geometric SPVL covariate and utilize full-timeseries, imputed data with debiasing. Null or age-only models performed worst in each dataset, with age-only models granting on average a 0.03-year (range -0.02, 0.1) increase in RMSE from their respective null model.
+
+\begin{sidewaysfigure}
+	\caption{Heatmap of Root Mean Squared Errors (RMSEs) for every data transform-model specification combination. Ranking listed below RMSE. UB: Upper Bound.}
+	\label{heatmap}
+		\includegraphics[scale=0.7]{heatmap}
+\end{sidewaysfigure}
+
+To explore these features in more depth, we take as a baseline the null, full-timeseries model without debiasing and without imputation, since this was the least-adjusted dataset with the simplest model specification. This model was ranked 134th, with an RMSE of 3.78. Twenty-six models performed worse  than this baseline (Figure \ref{heatmap}, bottom left). All were full-timeseries datasets, all but four had imputed values, all but four were debiased, and all either used the geometric method for estimating SPVL, or did not use SPVL as a covariate. The worst-performing models utilized the full-timeseries, debiased, imputed dataset with geometric SPVL and the SPVL-only, central, or two-way model specification. These models had an average RMSE of 3.94 ( range 3.92, 3.98), a decrease of 0.16 years (0.14, 0.20) from the baseline model. Holding everything constant except SPVL type in these nine models resulted in an average RMSE of 3.62 (3.60, 3.64), an improvement of 0.32 years (0.30, 0.34) from the geometric SPVL models and of 0.16 years (0.14, 0.18) from the baseline. Holding everything constant except time period for the worst-performing models (i.e. moving to the pre-1996 dataset) resulted in an average RMSE of 3.48 (3.47, 3.52), an improvement of 0.46 years (0.42, 0.47) from the full-timeseries models and of 0.30 years (0.26, 0.31) from the baseline model. Making both changes (using nonlinear SPVL and the pre-1996 dataset) resulted in an average RMSE of 3.19 (3.18, 3.20), an improvement of 0.75 years (0.74, 0.76) from the worst performers and of 0.59 (0.58, 0.60) from the baseline. 
+
+Nondebiased datasets consistently performed better than debiased, with am RMSE of 3.50 (range 3.16, 3.83) in the former group and 3.60 (3.18, 3.98) in the latter. Only 4 nondebiased models performed worse than baseline, with RMSEs of at most 3.83. The remaining nondebiased models include the six top-ranked (RMSE 3.16-3.18, improvements of 0.60-0.62 years from baseline). Nonimputed models performed slightly better than imputed models overall, with an average RMSE of 3.53 (range 3.16, 3.94) for the former and of 3.55 (3.16, 3.98) for the latter. 
+
+Three-way models performed differently depending on the dataset tested. In pre-1996 datasets, the three-way specification consistently performed worse than two-way, central, or SPVL-only specifications with on average a 0.13 (0.06, 0.26) year increase in RMSE over the two-way model. In full-timeseries datasets (with one exception) the three-way models performed best, with an RMSE on average 0.08 years (0.04, 0.11) lower than the two-way models. The one exception was the nondebiased nonimputed model, which behaved more similarly to the pre-1996 datasets.
+
+\begin{figure}
+	\caption{Predictions from top 5 models.}
+	\label{predictions}
+	\centering
+		\includegraphics[scale=0.6]{predictions}
+\end{figure}
+
+The top-performing model utilized the SPVL-only model specification and the pre-1996, nonimputed, nondebiased dataset. It predicted a 27.0\% (95\% CI 12.9, 38.8) decrease in mortality per tenfold increase in SPVL. The top ten models all predicted an effect on SPVL similar to this (for two-way interaction models, the effect of SPVL was calculated for age 33.7, the mean age in the dataset). Seven of the top ten models included a term for age at seroconversion ranging in effect size from a 10.5\% (-29.1, 47.7) decrease in mortality for every decade of age at seroconversion to a 1.7\% (-36.1, 51.9) increase in survival time. In none of these models was age at seroconversion significant. 
+
+
+\begin{table}[h!t]
+\centering
+\begin{tabular}{cccccc}
+  \hline
+ Ranking & Data Transform & Model Term & SPVL Only & Central & Two Way \\ 
+  \hline
+  1 & Nonimputed & Intercept & 3.01 &  &  \\ 
+  &  &  & (2.24, 3.79) &  &  \\ 
+  &  & I(AIDS) & -0.24 &  &  \\ 
+  &  &  & (-0.45, -0.04) &  &  \\ 
+  &  & SPVL & -0.32 &  &  \\ 
+  &  &  & (-0.49, -0.14) &  &  \\ 
+  2 & Imputed-UB 18 & Intercept &  & 3.22 &  \\ 
+  &  &  &  & (2.83, 3.62) &  \\ 
+  &  & I(AIDS) &  & -0.43 &  \\ 
+  &  &  &  & (-0.54, -0.31) &  \\ 
+  &  & Age &  & 0 &  \\ 
+  &  &  &  & (-0.01, 0) &  \\ 
+  &  & SPVL &  & -0.32 &  \\ 
+  &  &  &  & (-0.41, -0.22) &  \\ 
+  3 & Imputed-UB 18 & Intercept &  &  & 3.5 \\ 
+  &  &  &  &  & (2.12, 4.87) \\ 
+  &  & I(AIDS) &  &  & -0.43 \\ 
+  &  &  &  &  & (-0.54, -0.31) \\ 
+  &  & Age &  &  & -0.01 \\ 
+  &  &  &  &  & (-0.05, 0.03) \\ 
+  &  & SPVL &  &  & -0.38 \\ 
+  &  &  &  &  & (-0.72, -0.05) \\ 
+  &  & Age*SPVL &  &  & 0 \\ 
+  &  &  &  &  & (-0.01, 0.01) \\ 
+  4  & Imputed-UB 20 & Intercept &  & 3.24 &  \\ 
+  &  &  &  & (2.78, 3.7) &  \\ 
+  &  & I(AIDS) &  & -0.47 &  \\ 
+  &  &  &  & (-0.58, -0.35) &  \\ 
+  &  & Age &  & 0 &  \\ 
+  &  &  &  & (-0.01, 0) &  \\ 
+  &  & SPVL &  & -0.31 &  \\ 
+  &  &  &  & (-0.41, -0.21) &  \\ 
+  5  & Imputed-UB 18 & Intercept & 3.18 &  &  \\ 
+  &  &  & (2.78, 3.58) &  &  \\ 
+  &  & I(AIDS) & -0.43 &  &  \\ 
+  &  &  & (-0.54, -0.32) &  &  \\ 
+  &  & SPVL & -0.32 &  &  \\ 
+  &  &  & (-0.42, -0.22) &  &  \\ 
+   \hline
+\end{tabular}
+\caption{Top Five Regression Outputs} 
+\label{reg_table}
+\end{table}
+
+
+\section{Discussion}
+
+This analysis strove to find the most effective framework possible for predicting off-treatment HIV survival by answering three questions: Is there a best way to estimate SPVL? What are the relative effects of age at seroconversion and SPVL on survival? Does the interaction between the two matter?
+
+The answer to the first question seems to be an unequivocal yes. Modeling the asymptomatic phase of infection as a linearly increaseing function of viral load, rather than assuming approximately constant viral load values over the course of the asymptomatic phase, leads to better predictions for every model tested (mean RMSE difference between the two models 0.35 years, range 0.26, 0.42). This finding supports the assessment by Vidal et al. \cite{vidal_lack_1998} and Masel et al. \cite{masel_fluctuations_2000} that most patients' viral load progression is not well described by random flucutation around a single value. This is not to suggest that some marker of asymptomatic viral load is irrelevant to survival-- both this analysis and those by Fraser et al. show that such a viral load measurement is both highly variable across individuals and predictive of survival-- but our results suggest that the estimation framework pioneered by Nikos et al. and replicated here is a more appropriate marker than the traditional aggregate measures. On modern computers, there is little added computational cost of one method over another.
+
+In regards to the second question, our results suggest that SPVL (as we define it) is a considerably stronger predictor of survival time than age at seroconversion. Across the datasets tested, the age-only models had RMSE's barely better than the null models, whereas SPVL-only models performed on-par with the best performing models. Furthermore, even in models that included age, the confidence intervals on the estimate often crossed zero. 
+
+\begin{figure}
+	\caption{Age at seroconversion and SPVL vs survival time for each dataset.}
+	\label{agesero_spvl_data}
+		\includegraphics[scale=0.6]{agesero_spvl_data}
+\end{figure}
+
+This finding is consistent with our data (Figure \ref{agesero_spvl_data})-- while a relationship between viral load and survival time is apparent even in the models without imputed data, there is a much less clear relationship between survival and age at seroconversion. Given that age at seroconversion is a well-established predictor of HIV mortality, and that a significant relationship between the two has been found using this very dataset \cite{_time_2000}, this result is surprising. We posit several possible explanations:
+
+\begin{enumerate}
+	\item The models cited above did not include SPVL, which acts as a confounder in the age-mortality relationship. Given the poor performance of the age-only models in our analysis, this does not seem to be a large factor. The correlation between age and SPVL in our full model was only 0.11 for the nonlinear SPVL and 0.08 for the geometric SPVL. 
+
+	\item Our dataset had insufficiently varied ages to capture the effect of age on survival. Many of the studies cited above were designed specifically to explore the effects of HIV infection at older ages, and as such sampled heavily from older seroconverters and modeled age as a binary variable indicating whether a patient was or wasn't older than 50. The individuals in our study were overwhelmingly in their 20s or 30s, with only 6.3\% of the full sample and 3.5\% of the pre-1996 sample over the age of 50. Perhaps age at seroconversion begins to matter dramatically more over a certain age threshold that our sample could not capture.
+
+	\item Confounding by treatment. Most of the studies cited above assessed outcomes for patients who were receiving treatment It is plausible that treatment effects and age at seroconversion (as well as time form seroconversion to treatment, the presumed stabilization of viral load while on treatment, and other factors) could interact in such a way as to make age at seroconversion a stronger predictor of mortality than SPVL. 
+
+	\item Otherwise incomparable datasets. The CASCADE data consist almost entirely of men who have sex with men infected in Europe, where clade B of HIV is dominant. It's possible that study results from clade C-dominant sub-Saharan Africa or of populations infected by other routes may experience different relationships between age, SPVL, and off-treatment survival.
+\end{enumerate}
+
+The answer to the third question remains unclear. Different model specifications with dramatically different estimates of an interaction term's impact performed almost identically for each of our dataset types. this may be because the testing sets, like the dataset as a whole, consist largely of individuals in their 20's or 30's, and the predictions for these age groups is similar between the interaction and non-interaction models. Some of these interaction term models (e.g. those ranked 13 and 16), have low face validity and high uncertainty which seem to be statistical artifacts of a small sample size. Since models without interaction terms generally performed as well or better than those that did, parsimony compels us to prefer the simpler models. However, it is interesting to note that our interaction models fairly consistenly predicted a (nonsignificant) protective effect of age as SPVL increases. We would have expected the opposite. The nature of the interaction between age at seroconversion and SPVL as it relates to survival is an open area for further research. 
+
+\begin{figure}
+	\caption{Secular trend of SPVL in the population.}
+	\label{secular_trend}
+		\includegraphics[scale=0.7]{secular_trend}
+\end{figure}
+
+A strong correlation between SPVL and survival could have important policy implications. Pantazis noted in 2014 \cite{pantazis_temporal_2014} that SPVL at the population level has been increasing since the beginning of the epidemic. We also find this pattern-- an almost tenfold increase in population-level SPVL from 1990 to 2014 (Figure \ref{secular_trend}). Later work \cite{herbeck_evolution_2016} shows that this phenomenon is likely due to selective pressure on the virus by drug regimens: while HIV naturally selects for strains of intermediate virulence to simultaneously optimize transmissibility and duration of infection, widespread use of antiretrovirals incentivizes selection of more virulent, shorter-lived HIV strains.
+
+The WHO's recommendation of universal testing and treatment for HIV+ individuals has two relevant implications for the coming years: many more people will go on treatment, and some highly vulnerable populations will prove extremely difficult tor reach with widespread and effective medication. These populations may eventually experience higher set point viral load due to the aforementeioned selection pressure, leaving them at an even higher risk of mortality than they previously faced. Our analysis highlights the need to proactively identify and target these groups for treatment to minimize their risk.
+
+This work has several limitations. Although our full sample was almost 17,000 individuals strong, only a small subset of those individuals experienced our outcome of interest-- death without ever going on treatment. From a public health perspective, this reflects the widespread efficacy of lifesaving HIV treatement programs, and we laud that achievement, but it did force a trade-off between severely limiting sample size and imputing a large fraction of our data. The best-perfoming model picked a middle ground between the two. Furthermore, across all datasets tested, the relative importance of SPVL and age was similar. 
+
+The assumption of missingness-at-random for treatment initiation is not universally agreed-upon. While Pantazis et al. and others make this assumption, others [cite] have argued that treatemnt initiation should be considered a missing not-at-random form of censorship. 
+
+Finally, the composition of our dataset prevented us from stratifying effectively on gender, and may have prevented us from finding a significant effect of age on survival. We look to other analyses on more diverse populations to address these questions. 
+
+\section{Conclusion}
+
+Our best model predicted a 25.4\% (95\% CI 17.6, 32.4) decrease in survival per log10 increase in set-point viral load, and a 0.07\% (-6.68, 6.77) decrease in survival for every decade of age at seroconversion. The most appropriate method of SPVL calculation assumes a linear increase in viral load over time, not a steady state. SPVL is a better predictor of survival than age at seroconversion, and the interaction between the two is unclear. The strong correlation between SPVL and survival, combined with a secular increase in population-level SPVL and the rollout of universal test and treat HIV care, may put vulnerable populations at higher risk of premature HIV mortality. 
+
+\section{Acknowledgements}
+
+Many thanks to my committee members Abie, Anna, Laura, and Mike for thoughtful input and good conversation. Thanks also to my collaborator Christian with whom I hope to publish this work, and to Mouse and Bug for important editorial decisions.
+
+\section{Appendix}
+
+\subsection{Details of Imputation}
+
+AMELIA II is a multiple-imputation software package that uses a bootstrapped expectation-maximization (EM) algorithm to ``fill in'' missing values in datasets (cite King). Each run of the imputation will return a user-specified number of datasets, each with identical observed values and with varied imputed values representing the uncertainty in the imputed estimates. Further analyses are run on each imputed dataset separately, and results combined at the end. The EM algorithm estimates by borrowing strength from other covariates in the dataset, and users are encouraged to include in the imputation at least all variables included in any regressions they intend to run.
+
+For each data transformation described in the main text we imputed 10 datasets, including the following variables in addition to our variable of interest, time to death: patient identifier, time to event (death or censorship), age at seroconversion, geometric SPVL, and nonlinear SPVL. Some missing SPVL values were also imputed. Bounds on imputation outputs were specified as detailed in the main text.
+
+After obtaining model coefficients and standard errors from each imputed dataset, we followed the suggested procedures in Honaker \cite{honaker_amelia_2015} to combine model outputs into final results.
+
+\subsection{SPVL Determination}
+
+\subsubsection{Nonlinear Determination of SPVL}
+
+To calculate the nonlinear SPVL covariate, we adopted a method from Pantazis et al. \cite{pantazis_bivariate_2005} in which viral load trajectory after seroconversion (in log10 space) is modeled as an exponential decline followed by a linear increase until AIDS. the minimum of this function is considered the set point. The model is specified as follows: 
+
+\begin{equation}
+	f(t) := log10vl(t) = (\beta_{0} + \gamma_{0}) + (\beta_{1}+\gamma_{1})t + \beta_{2}e^{-\beta_{3}t}
+\end{equation}
+
+where $\beta_{0}$ and $\beta_{1}$ are the fixed-effect intercept and slope for the linear part of the model, $\gamma_{0}$ and $\gamma_{1}$ are person-level random effects for the intercept and slope, $\beta_{3}$ describes the rate of exponential decline, and $\beta_{2}$ described the magnitude of that decline (both are fixed effects). One can then calculate an individual's time to set point (TTS) from the following equation:
+
+\begin{equation}
+tts(\beta_{1}, \beta_{2}, \beta_{3}, \gamma_{1}) = -\frac{1}{\beta_{3}} log\left(\frac{\beta_{1} + \gamma_{1}}{\beta_{2}\beta_{3}}\right)
+\end{equation}
+
+and find that individual's SPVL by plugging this TTS back into the fitted model: $spvl=f(tts)$. Similarly, a population-level SPVL can be found by including only fixed effects from the nonlinear model into the TTS equation.
+
+The nonlinear model had $\beta_{0}$ of 4.25 (SE 0.008), $\beta_{1}$ of 0.16 (0.002), $\beta_{2}$ of 1.15 (0.023), and $\beta_{3}$ of 16.0 (0.54). 
+
+\subsubsection{Hybrid Method for SPVL Determination}
+
+The geometric method for SPVL determination picks 6 months after seroconversion as the beginning of the asymptomatic phase. To test how arbitrary this value was, we calculated the populaton-level TTS, and calculated the SPVL as the geometric mean from that time, rahter than from 6 months after seroconversion. 
+
+The global TTS for the nonlinear model was 3.6 months. Taking a geometric mean from this time point produced results very similar to those of the geometric mean from 6 months after seroconversion, and as such this metric was excluded from further analysis.
+
+\subsubsection{Imputation of SPVL Values}
+
+Those patients without viral load measurements more than 6 months after seroconversion (full timeseries: 2,233; pre-1996: 26) had an indeterminate SPVL according to the geometric method. Those patients for which the nonlinear model predicted a decline in viral load (full timeseries: 3,103; pre-1996: 78) had an indeterminate SPVL according to the nonlinear method. In the imputation datasets, these individuals had an SPVL imputed along with time to death. In the non-imputation datasets, those with observed death or AIDS events and without SPVL measurements were exlcuded from the model (Geometric method: full timeseries 46, pre-1996 1; Nonlinear method: full timeseries 116, pre-1996 13).
+
+
+\subsection{All Model Specifications and Coefficients}
+
+\printbibliography
+
+\end{document}

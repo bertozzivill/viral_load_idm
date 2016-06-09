@@ -187,91 +187,87 @@ names(data_list) <- colnames(data.for.survival)
 
 ## give data transforms and model specs beautiful names
 
-name_transform <- function(this_transform, return_full=T){
+name_transform <- function(this_transform){
   this_transform <- as.list(strsplit(this_transform, split="-")[[1]])
   names(this_transform) <- c("upper_bound", "debias", "pre_96", "no_impute")
-    
-  if (return_full){
-    this_name <- paste(ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed"),
-                       ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time"),
-                       ifelse(this_transform$debias=="1", "Debiased", "Nondebiased"),
-                       ifelse(this_transform$upper_bound=="2.9" & this_transform$no_impute=="1", "", paste("UB", this_transform$upper_bound)),
-                       sep="-")
-  }else{
-    this_name <- paste(ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed"),
-                       ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time"),
-                       sep="-")
-  }
   
-  if (str_sub(this_name, -1,-1)=="-") this_name <- substr(this_name, 1, nchar(this_name)-1)
+  imp_type <- ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed")
+  time <- ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time")
+  bias_type <- ifelse(this_transform$debias=="1", "Debiased", "Nondebiased")
+  imp_ub <- ifelse(this_transform$upper_bound=="2.9" & this_transform$no_impute=="1", "none", this_transform$upper_bound)
+  
+  describe_transform <- data.table(imp_type=imp_type, time=time, bias_type=bias_type, imp_ub=imp_ub)
 
-return(this_name)
+return(describe_transform)
 }
 
-spec_transform <- function(this_spec, return_full=T){
+name_spec <- function(this_spec){
   this_spec <- as.list(strsplit(this_spec, split="-")[[1]])
   names(this_spec) <- c("spvl_method", "interaction_type", "include.age")
   
-  if (this_spec$spvl_method=="none"){
-    this_name <- ifelse(this_spec$include.age=="FALSE", "Null", "Age Only")
-  }else if (this_spec$include.age=="FALSE"){
-    this_name <- "SPVL Only"
-  }else{
-    this_name <- ifelse(this_spec$interaction_type=="none", "Main",
-                        ifelse(this_spec$interaction_type=="two_way", "Two Way", "Three Way"))
-  }
+  spvl_type <- ifelse(this_spec$spvl_method=="none", "none", ifelse(this_spec$spvl_method=="spvl_model", "Nonlinear", "Geometric"))
+  interaction_type <- ifelse(this_spec$interaction_type=="none", "none",
+                             ifelse(this_spec$interaction_type=="two_way", "Two Way", "Three Way"))
+  include_age <- ifelse(this_spec$include.age=="FALSE", F, T)
   
-  if (return_full & this_spec$spvl_method!="none"){
-    this_name <- paste(this_name,
-                       ifelse(this_spec$spvl_method=="spvl_model", "Nonlinear SPVL", "Geometric SPVL"),
-                       sep="-")
-  }
+  describe_spec <- data.table(spvl_type=spvl_type, interaction_type=interaction_type, include_age=include_age)
   
-  return(this_name)
+  return(describe_spec)
+
 }
 
-full_names <- unlist(lapply(ranking$data_transform, name_transform))
-full_specs <- unlist(lapply(as.character(ranking$model_spec), spec_transform))
+full_transform <- rbindlist(lapply(ranking$data_transform, name_transform))
+full_transform[, ranking:= as.numeric(rownames(full_transform))]
+full_spec <- rbindlist(lapply(as.character(ranking$model_spec), name_spec))
+full_spec[, ranking:= as.numeric(rownames(full_spec))]
 
-ranking[, full_transform:=full_names]
-ranking[, full_spec:= full_specs]
+ranking <- merge(ranking, full_transform, by="ranking", all=T)
+ranking <- merge(ranking, full_spec, by="ranking", all=T)
+ranking[, imp_ub:= ifelse(imp_ub=="none", "none",
+                          ifelse(imp_ub=="2.9", "18",
+                                 ifelse(imp_ub=="3", "20", "22")))]
+
+ranking[, full_transform:= paste0(time, "-", bias_type, "-", imp_type,   ifelse(imp_ub=="none", "", paste0("-UB ", imp_ub)))]
+ranking[, full_spec:= ifelse(spvl_type=="none" & include_age==F, "Null",
+                             ifelse(spvl_type=="none" & include_age==T, "Age Only",
+                                    paste0(spvl_type, "-", ifelse(include_age==F, "SPVL Only", 
+                                                                  ifelse(interaction_type=="none", "Central", interaction_type)))))]
 
 ###heatmap of data tranforms and model specs, with color=rmse
 
-for_heatmap <- ranking[(full_spec %like% "Nonlinear" | !full_spec %like% "SPVL") & full_transform %like% "Debiased" &
-                         (full_transform %like% "UB 3.1" | full_transform %like% "Nonimputed")]
+for_heatmap <- copy(ranking)
 
-short_names <- unlist(lapply(for_heatmap$data_transform, function(x){name_transform(x, return_full=F)}))
-short_spec <- unlist(lapply(as.character(for_heatmap$model_spec), function(x){spec_transform(x, return_full=F)}))
-for_heatmap[, short_transform:=short_names]
-for_heatmap[, short_specs:= short_spec]
-
-for_heatmap[, short_specs:= factor(short_specs, levels=c( "Null", "Age Only", "SPVL Only","Main", "Two Way", "Three Way"))]
-for_heatmap[, short_transform:= factor(short_transform, levels=rev(c("Imputed-Pre 1996", "Nonimputed-Pre 1996", "Imputed-Full Time", "Nonimputed-Full Time")))]
 setnames(for_heatmap, c("oos_rmse", "ranking"), c("RMSE", "Ranking"))
+for_heatmap[imp_ub=="none", imp_ub:="0"] #so ranking works
+for_heatmap <- for_heatmap[order(-time, -bias_type, -imp_type, imp_ub)]
 
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=7, height=9)
+for_heatmap[, full_transform:= factor(full_transform, levels=rev(unique(for_heatmap$full_transform)))]
 
-heatmap <- ggplot(for_heatmap, aes(x=short_specs, y=short_transform)) +
+for_heatmap[, full_spec:= factor(full_spec, levels=c( "Null", "Age Only", "Geometric-SPVL Only", "Geometric-Central", "Geometric-Two Way", "Geometric-Three Way",
+                                                      "Nonlinear-SPVL Only", "Nonlinear-Central",  "Nonlinear-Two Way", "Nonlinear-Three Way"))]
+
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=11, height=9)
+
+heatmap <- ggplot(for_heatmap, aes(x=full_spec, y=full_transform)) +
             geom_tile(aes(fill=RMSE)) +
-            geom_text(aes(fill = RMSE, label = round(RMSE, 2))) +
+            geom_text(color="grey", aes(fill = RMSE, label = paste0(round(RMSE, 2), "\n", "(", Ranking, ")" ))) +
             scale_fill_gradient(low = "blue", high = "red") +
+            theme(axis.text.x=element_text(angle = 45, hjust=1))+
             labs(title="RMSE by Data Transform and Model Specification",
                  y="Data Transform",
                  x="Model Specification")
 
-ranking_heatmap <- ggplot(for_heatmap, aes(x=short_specs, y=short_transform)) +
-                    geom_tile(aes(fill=Ranking)) +
-                    geom_text(aes(fill = Ranking, label=Ranking)) +
-                    scale_fill_gradient(low = "blue", high = "red") +
-                    labs(title="Ranking by Data Transform and Model Specification",
-                         y="Data Transform",
-                         x="Model Specification")
-
-multiplot(heatmap, ranking_heatmap)
-
+print(heatmap)
 
 graphics.off()
+
+
+##find mean RMSE's over each possible type of action
+summary_rmse <- melt(ranking, id.vars=c("ranking", "oos_rmse"), measure.vars=c("imp_type", "time", "bias_type", "imp_ub",
+                                                                             "spvl_type", "interaction_type", "include_age"))
+summary_rmse[, type:= ifelse(variable %in% c("imp_type", "time", "bias_type", "imp_ub"), "data_transform", "model_spec")]
+summary_rmse[, mean_rmse:= mean(oos_rmse), by=c("variable", "value")]
+unique(summary_rmse[, list(type, variable, value, mean_rmse)])
 
 
 ##line plots of predicted results and data
@@ -337,13 +333,19 @@ predict_results <- function(ranking_list, title="Predictions by Model", show_leg
   }
 
   to_plot <- rbindlist(to_plot)
-  to_plot[, ranking:=factor(ranking, levels=ranking_list)]
+  to_plot <- merge(to_plot, ranking[, list(ranking, full_spec, full_transform)], by="ranking", all.x=T)
+  to_plot[, full_spec:=gsub("Nonlinear-", "", full_spec)]
+  to_plot[, full_transform:= gsub("Pre 1996-Nondebiased-", "", full_transform)]
+  to_plot[, full_name:= paste(full_transform, full_spec, sep="-")]
+  to_plot <- to_plot[order(ranking)]
+  ordered_names <- unique(to_plot$full_name)
+  to_plot[, full_name:=factor(full_name, levels=ordered_names)]
   to_plot <- to_plot[spvl>=2 & spvl<=6.5 & event_num==0]
   
   result <- ggplot(data=to_plot, aes(x=spvl, y=time_to_event)) +
       geom_point(data=to_plot[category=="data"], aes(color=binned_age), alpha=0.5) +
       geom_line(data=to_plot[category=="modeled"], aes(color=agesero), size=1) +
-      facet_grid(.~ranking) +
+      facet_grid(.~full_name) +
       scale_color_discrete(name="Age at\nSeroconversion")+
       labs(title=title,
            x="SPVL (log10 units/mL)",
@@ -354,31 +356,15 @@ predict_results <- function(ranking_list, title="Predictions by Model", show_leg
   return(result)
 }
 
-multiplot(predict_results(1:5), predict_results(6:10))
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/predictions.pdf", width=11, height=4)
 
-
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/predictions.pdf", width=9, height=12)
-
-imp_96 <- c(1:3, 10)
-nonimp_96 <- 13:16
-imp <- c(23, 28:30)
-nonimp <- c(37:38, 42:43)
-all_models <- c(imp_96, nonimp_96, imp, nonimp)
-
-
-one <- predict_results(imp_96, title="A: Imputed-Pre 96")
-two <- predict_results(nonimp_96, title="B: Nonimputed-Pre 96")
-three <- predict_results(imp, title="C: Imputed-Full Time")
-four <- predict_results(nonimp, title="D: Nonimputed-Full Time")
-
-#multiplot(one,two,three,four, layout=matrix(c(1,2,3,4,1,2,3,4,0,2,3,0, 0,2,0,0), nrow=4))
-multiplot(one,two,three,four)
+  print(predict_results(1:5))
 
 graphics.off()
 
 
 ### better look at % change for agesero and spvl
-perc_table <- summary.survival.model.summaries[ranking %in% nonimp]
+perc_table <- summary.survival.model.summaries[ranking %in% 1:10]
 perc_table <- perc_table[covariate %in% c("agesero", "spvl_model"), list(ranking, data_transform, model_spec, oos_rmse, covariate, effect_mean, effect_lower, effect_upper)]
 perc_table[,effect_mean:= ifelse(covariate=="agesero", effect_mean*1000, effect_mean*100)]
 perc_table[,effect_lower:= ifelse(covariate=="agesero", effect_lower*1000, effect_lower*100)]
@@ -386,44 +372,42 @@ perc_table[,effect_upper:= ifelse(covariate=="agesero", effect_upper*1000, effec
 
 ### regression tables
 
-make_reg_table <- function(this_transform, this_caption="", this_label=""){
-  reg_table <- summary.survival.model.summaries[data_transform==this_transform & !model_spec %like% "fraser"]
-  reg_table <- reg_table[, list(model_spec, covariate, beta, lower, upper)]
+make_reg_table <- function(rankings){
+  reg_table <- summary.survival.model.summaries[ranking %in% rankings]
+  reg_table <- reg_table[, list(ranking, covariate, beta, lower, upper)]
   reg_table[, uncert:= paste0("(", round(lower,2), ", ", round(upper,2), ")")]
   reg_table[, beta:= as.character(round(beta,2))]
   reg_table[, c("lower", "upper"):=NULL]
-  spec_names <- unlist(lapply(as.character(reg_table$model_spec), function(x){spec_transform(x, return_full = F)}))
-  reg_table[, model_spec:= spec_names]
-  reg_table <- melt(reg_table, id.vars = c("model_spec", "covariate"))
-  reg_table <- data.table(dcast(reg_table, covariate+variable~model_spec))
+  reg_table <- merge(reg_table, ranking[, list(ranking, full_spec, full_transform)], by="ranking", all.x=T)
+  reg_table <- melt(reg_table, id.vars = c("ranking", "full_transform", "full_spec", "covariate"))
+  reg_table[, full_spec:= gsub("Nonlinear-", "", full_spec)]
+  reg_table[, full_transform:= gsub("Pre 1996-Nondebiased-", "", full_transform)]
   
+  reg_table <- data.table(dcast(reg_table, ranking+full_transform+covariate+variable~full_spec))
   
   #format rows and columns
-  setnames(reg_table, "covariate", "Covariate")
-  setcolorder(reg_table, c("Covariate", "variable", "Null", "Age Only", "SPVL Only", "Main", "Two Way", "Three Way"))
+  setnames(reg_table, c("ranking", "full_transform"), c("Ranking", "Data Transform"))
+  setcolorder(reg_table, c("Ranking", "Data Transform", "covariate", "variable", "SPVL Only", "Central", "Two Way"))
   
-  reg_table[, Covariate:= factor(Covariate, labels=c("Intercept", "Age", "Age*I(AIDS)",
-                                                      "Age*SPVL", "Age*SPVL*I(AIDS)", "I(AIDS)", "SPVL",
-                                                      "SPVL*I(AIDS)"))]
+  reg_table[, covariate:= factor(covariate, labels=c("Intercept", "Age",
+                                                      "Age*SPVL", "I(AIDS)", "SPVL"))]
   
-  reg_table[, Covariate:= factor(Covariate, levels=c("Intercept", "I(AIDS)", "Age",
-                                                     "SPVL", "Age*SPVL", "Age*I(AIDS)", "SPVL*I(AIDS)",
-                                                     "Age*SPVL*I(AIDS)"))]
-  reg_table <- reg_table[order(Covariate)]
+  reg_table[, covariate:= factor(covariate, levels=c("Intercept", "I(AIDS)", "Age",
+                                                     "SPVL", "Age*SPVL"))]
+  reg_table <- reg_table[order(Ranking, covariate)]
   
-  reg_table[, Covariate:=as.character(Covariate)]
-  reg_table[variable=="uncert", Covariate:=NA]
+  reg_table[, covariate:=as.character(covariate)]
+  reg_table[variable=="uncert", covariate:=NA]
   reg_table[, variable:=NULL]
+  reg_table[covariate!="Intercept" | is.na(covariate), Ranking:=NA]
+  reg_table[covariate!="Intercept" | is.na(covariate)][["Data Transform"]] <- NA
+  setnames(reg_table, "covariate", "Model Term")
   
-  this_table <- xtable(reg_table, caption=this_caption, label=this_label)
-  return(this_table)
+  return(reg_table)
 }
 
-make_reg_table("3.1-1-1-0", this_caption="Imputed-Pre 1996 Regression Outputs", this_label="reg_imp_96")
-make_reg_table("2.9-1-1-0", this_caption="Nonimputed-Pre 1996 Regression Outputs", this_label="reg_nonimp_96")
-make_reg_table("3.1-1-0-0", this_caption="Imputed-Full Time Regression Outputs", this_label="imp")
-make_reg_table("2.9-1-0-1", this_caption="Nonimputed-Full Time Regression Outputs", this_label="nonimp")
-
+top_5 <- make_reg_table(1:5)
+print(xtable(top_5, caption="Top Five Regression Outputs", label="reg_table", include.rownames=F))
 
 
 ### what's the mean difference in rmse between geometric and nonlinear spvl?
@@ -434,14 +418,13 @@ test_diff[, full_model:=paste(full_transform, short_spec, sep="-")]
 test_diff <- data.table(dcast(test_diff, full_model~spvl_method, value.var="oos_rmse"))
 test_diff[, diff:= Geometric-Nonlinear]
 
-
-
 ###plot age at seroconversion and spvl in the four datasets
-reported_transforms <- unique(ranking[ranking %in% all_models, data_transform])
+reported_transforms <- unique(ranking[bias_type=="Nondebiased" & imp_ub %in% c("none", "18"), data_transform])
 reported_data <- lapply(reported_transforms, function(this_transform){
                     print(this_transform)
                     this_data <- data_list[[this_transform]]
                     this_data[, data_transform:=this_transform]
+                    this_data[, binned_age:=NULL]
                     return(this_data)
 })
 
@@ -449,59 +432,45 @@ reported_data <- rbindlist(reported_data)
 reported_data <- reported_data[, list(patient_id, agesero, observed_survival, spvl_model, event_num=as.numeric(as.character(event_num)), data_transform)]
 
 #give data_transforms better names
-reported_data[, data_transform:= factor(data_transform, labels=c("Nonimputed-Full Time", "Nonimputed-Pre 1996", "Imputed-Full Time", "Imputed-Pre 1996"))]
+reported_data[, data_transform:= factor(data_transform, labels=c("Imputed-Full Time", "Nonimputed-Full Time",  "Imputed-Pre 1996",   "Nonimputed-Pre 1996"))]
 reported_data[, data_transform:= factor(data_transform, levels=c("Nonimputed-Pre 1996", "Nonimputed-Full Time", "Imputed-Pre 1996","Imputed-Full Time"))]
 
-agesero <- ggplot(reported_data[event_num==0], aes(x=agesero, y=observed_survival)) +
+agesero <- ggplot(reported_data[event_num==0], aes(x=agesero, y=exp(observed_survival))) +
             geom_point(alpha=0.5) +
             facet_grid(~data_transform) +
-            labs(x="Age at Seroconversion", y="log(Survival Time)")
+            scale_y_log10(breaks=c(0,1,2,4,6,8,10,20))+
+            labs(x="Age at Seroconversion", y="Survival Time(Years)")
 
-spvl <- ggplot(reported_data[event_num==0], aes(x=spvl_model, y=observed_survival)) +
+spvl <- ggplot(reported_data[event_num==0], aes(x=spvl_model, y=exp(observed_survival))) +
           geom_point(alpha=0.5) +
           facet_grid(~data_transform)+
-          labs(x="SPVL", y="log(Survival Time)")
+          scale_y_log10(breaks=c(0,1,2,4,6,8,10,20))+
+          labs(x="SPVL(log10 units/mL)", y="Survival Time(Years)")
         
 
 pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/agesero_spvl_data.pdf", width=11, height=7)
   multiplot(spvl, agesero)
 graphics.off()
 
-#multiplot(agesero, spvl, layout=matrix(c(1,2,0,0, 1,2,0,0, 1,2,0,0), nrow=4))
-
 
 ###plot secular trend of spvl
-surv[, serocon_year := as.numeric(format(serocon_date, "%Y"))]
-surv[, serocon_month:= as.numeric(format(serocon_date, "%m"))]
-surv[, serocon_time:= as.Date(paste0(serocon_year, "-", serocon_month, "-15"), origin="1970-01-01")]
-surv[, mean_spvl:=mean(spvl_model, na.rm=T), by="serocon_time"]
-mean_times <- unique(surv[,list(serocon_time, mean_spvl)])
-mean_times <- mean_times[order(serocon_time)]
-
-secular_trend <- gam(spvl_model~serocon_date, data=surv)
-
-dateseq <- seq(as.Date("1983-07-15"), as.Date("2014-01-28"), by="month")
-new_data <- data.table(serocon_date=dateseq)
-new_data[, predicted:= predict(secular_trend, newdata=new_data)]
-
-
 
 secular <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
             #geom_point(alpha=0.3) +
             geom_smooth(size=2, color="red") +
             labs(title="Secular Trend of SPVL: Conditional Mean",
                  x="Seroconversion Date",
-                 y="SPVL")
+                 y="SPVL(log10 units/mL)")
 
 secular_hex <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
   geom_hex(bins=50)+ 
   geom_smooth(size=2, color="red")+
   labs(title="Secular Trend of SPVL:Density",
        x="Seroconversion Date",
-       y="SPVL") +
+       y="SPVL(log10 units/mL)") +
   theme(legend.position="none")
 
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/secular_trend.pdf", width=8, height=10)
+pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/secular_trend.pdf", width=7, height=10)
 
   multiplot(secular, secular_hex)
 
