@@ -413,10 +413,15 @@ print(xtable(top_5, caption="Top Five Regression Outputs", label="reg_table", in
 ### what's the mean difference in rmse between geometric and nonlinear spvl?
 test_diff <- ranking[model_spec %like% "spvl"]
 test_diff[, spvl_method:= ifelse(full_spec %like% "Nonlinear", "Nonlinear", "Geometric")]
-test_diff[, short_spec:= gsub("-(Nonlinear|Geometric) SPVL", "", full_spec)]
+test_diff[, short_spec:= gsub("(Nonlinear|Geometric)-", "", full_spec)]
 test_diff[, full_model:=paste(full_transform, short_spec, sep="-")]
 test_diff <- data.table(dcast(test_diff, full_model~spvl_method, value.var="oos_rmse"))
 test_diff[, diff:= Geometric-Nonlinear]
+
+## between pre-96 and full timeseries for those two?
+test_diff[, pre_96 := ifelse(full_model %like% "Pre 1996", T, F)]
+year_diff <- test_diff[, list(Geometric=mean(Geometric), Nonlinear=mean(Nonlinear)), by="pre_96"]
+year_diff[, diff:= Geometric-Nonlinear]
 
 ###plot age at seroconversion and spvl in the four datasets
 reported_transforms <- unique(ranking[bias_type=="Nondebiased" & imp_ub %in% c("none", "18"), data_transform])
@@ -456,23 +461,28 @@ graphics.off()
 ###plot secular trend of spvl
 
 secular <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
-            #geom_point(alpha=0.3) +
             geom_smooth(size=2, color="red") +
-            labs(title="Secular Trend of SPVL: Conditional Mean",
+            labs(title="",
                  x="Seroconversion Date",
                  y="SPVL(log10 units/mL)")
+
+secular_data <-  ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
+                geom_point(alpha=0.3) +
+                geom_smooth(size=2, color="red") +
+                labs(title="Secular Trend of SPVL: Conditional Mean",
+                     x="Seroconversion Date",
+                     y="SPVL(log10 units/mL)")
 
 secular_hex <- ggplot(surv, aes(x=serocon_date, y=spvl_model)) +
   geom_hex(bins=50)+ 
   geom_smooth(size=2, color="red")+
   labs(title="Secular Trend of SPVL:Density",
        x="Seroconversion Date",
-       y="SPVL(log10 units/mL)") +
-  theme(legend.position="none")
+       y="SPVL(log10 units/mL)")
 
 pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/secular_trend.pdf", width=7, height=10)
 
-  multiplot(secular, secular_hex)
+  multiplot(secular_data, secular)
 
 graphics.off()
 
