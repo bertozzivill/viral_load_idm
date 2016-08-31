@@ -65,6 +65,8 @@ index.survival.models<-expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
   include.age=T)
+
+##note: include age bins in this regression method. can we still run interactions in the same way?
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
 age.only <- list("none", "none", T)
 spvl.only <- expand.grid(
