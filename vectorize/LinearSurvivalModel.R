@@ -1,11 +1,17 @@
-LinearSurvivalModel<-function(data,
+LinearSurvivalModel<-function(orig_data,
                               spvl_method='spvl_model',
                               interaction_type="none",
                               include.age=T,
+                              age.type="cont",
                               return.modelobject=T){
   
   
   ###arguments of function
+  
+  
+  ## immediately make a copy of the original dataset. 
+  ## Use this instead of orig_data so we can manipulate it without interfereing with the mapply.
+  data <- copy(orig_data)
          
   print(paste0("SURVIVAL: ","log normal survival with ",spvl_method, ", interaction type ", interaction_type, " and ", ifelse(include.age, "age", "no age")))
   
@@ -14,8 +20,23 @@ LinearSurvivalModel<-function(data,
     stop(paste("interaction type is", interaction_type, ", but spvl method is", spvl_method, "and age is", ifelse(include.age, "included", "not included")))
   }
   
+  ## Define age, based on age_type above
+  if (include.age & age.type!="cont"){
+    print(paste("binning age using type", age.type))
+    data[, agesero_cont:= agesero]
+    
+    if (age.type=="bin_10"){
+      #print(summary(data))
+      data[, agesero:= cut(agesero_cont, breaks=c(15, 25, 35, 45, Inf), labels=c("15-25", "25-35", "35-45", "45+"))]
+    }else if (age.type=="quint"){
+      data[, agesero:= cut(agesero_cont, breaks=5, labels=c("quint_1", "quint_2", "quint_3", "quint_4", "quint_5"))]
+    }else{
+      print(paste("unrecognized age type", age.type))
+    }
+  }
+  
   age_str <- ifelse(include.age, "agesero +", "")
-  spvl_str <- ifelse(spvl_method=="none", "", paste0(spvl_method, "+"))
+  spvl_str <- ifelse(spvl_method=="none", "", paste0(spvl_method, ""))
   
   #specify formula
   if (interaction_type=="none"){
@@ -30,11 +51,13 @@ LinearSurvivalModel<-function(data,
 
   ###evaluate model
   output <- lm(as.formula(model_formula), data=data)
+  
   if(return.modelobject){
     return(list('lm'=output,'AIC'=round(AIC(output))))
   }else{
     return(output)
   }
-
+  
+  
 }
 

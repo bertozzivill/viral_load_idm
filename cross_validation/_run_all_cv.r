@@ -29,11 +29,12 @@ qsub <- function(code, name="abertozz", arguments=NULL, hold=NULL, shell="r_shel
   return(as.numeric(strsplit(id, " ")[[1]][3]))
 }
 
-# prep cross validation
-prep_jid <- qsub(code="../cross_validation/prep_cross_validation.r",
-                 name="prep_cv",
-                 arguments=c(main_dir),
-                 slots=10)
+## ONLY uncomment this if you intend to overwrite the imputed dataset that was used for paper publication (not recommended!)
+# # prep cross validation
+# prep_jid <- qsub(code="../cross_validation/prep_cross_validation.r",
+#                  name="prep_cv",
+#                  arguments=c(main_dir),
+#                  slots=10)
 
 #run cross validation
 cv_jid <- lapply(1:10, function(iteration){

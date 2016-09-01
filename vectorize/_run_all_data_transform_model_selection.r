@@ -17,10 +17,6 @@
 
 rm(list=ls())
 
-
-#test.run=c(1,4)#run only selected rows of data.transform.index
-test.run=0#run full data.transform.index
-
 library(data.table)
 library(ggplot2)
 library(lme4)
@@ -32,7 +28,7 @@ dir.exists <- function(d) {
   de <- file.info(d)$isdir
   ifelse(is.na(de), FALSE, de)
 }
-root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
+root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozzivilla/Dropbox (IDM)/viral_load/cascade/data/")
 main_dir <- ifelse(length(commandArgs())>2, commandArgs()[3], root_dir)
 validation <- ifelse(length(commandArgs())>2, T, F)
 
@@ -55,7 +51,8 @@ observed.only.index <- expand.grid(upper_bound=c(2.9),
                                    observed_only=c(T))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
-source("data.transform.R")
+## ONLY uncomment this if you intend to overwrite the imputed dataset that was used for paper publication (not recommended!)
+## source("data.transform.R")
 
 ############################################################################################################
 ## Run Models 
@@ -64,18 +61,26 @@ source("data.transform.R")
 index.survival.models<-expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
-  include.age=T)
+  include.age=T,
+  age.type= c("cont", "bin_10", "quint"))
 
-## note: include age bins in this regression method. can we still run interactions in the same way?
-## More test comments
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
-age.only <- list("none", "none", T)
+
+age.only <- expand.grid(
+  spvl_method="none",
+  interaction_type="none",
+  include.age=T,
+  age.type= c("cont", "bin_10", "quint"))
+
 spvl.only <- expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type="none",
-  include.age=F)
-null.model <- list("none", "none", F)
-index.survival.models <- rbind(index.survival.models, age.only, spvl.only,null.model)
+  include.age=F,
+  age.type= "none")
+
+null.model <- list("none", "none", F, "none")
+
+index.survival.models <- rbind(index.survival.models, age.only, spvl.only, null.model)
 
 save(index.data.transform, index.survival.models, file=paste0(main_dir, "indexes.rdata"))
 
