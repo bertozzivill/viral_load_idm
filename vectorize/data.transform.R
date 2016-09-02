@@ -25,6 +25,6 @@ data.for.survival<-mapply(TransformData,
 rownames(data.for.survival)<-paste0("imputation_number=",c(1:imputation_count))
 colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
 
-save(data.for.survival, index.data.transform, file=paste0(main_dir, "imputed_survival_data.rdata"))  
+#save(data.for.survival, index.data.transform, file=paste0(main_dir, "imputed_survival_data.rdata"))  
 
 

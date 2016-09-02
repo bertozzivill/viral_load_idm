@@ -33,9 +33,10 @@ data_transform_names <- data_transform_names[, list(Var2, imp=paste0("imp_count_
 data_transform_names <- apply(data_transform_names, 1, function(x) paste(x, collapse="-"))
 names(survival.model.output) <- data_transform_names
 
-
-#save regression outputs for cross-validation, as well as the index values telling you what each list element means
-print("saving imputed survival data")
-#save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
+if (!validation){
+  #save regression outputs for cross-validation, as well as the index values telling you what each list element means
+  print("saving imputed survival data")
+  save(survival.model.output, index.survival.models, index.data.transform, file=paste0(main_dir, "survival_model_output.rdata"))
+}
 
 
