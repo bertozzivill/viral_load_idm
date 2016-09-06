@@ -5,8 +5,8 @@ library(data.table)
 
 #load rmse results
 print("loading rmse")
-for (iteration in 1:10){
-  for (split in 1:10){
+for (iteration in 1:iteration_count){
+  for (split in 1:split_count){
     new_dir <-paste0(main_dir, iteration, "/", split, "/")
     print(paste("iteration", iteration, "split", split))
     load(paste0(new_dir, "rmse.rdata"))

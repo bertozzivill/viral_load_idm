@@ -16,11 +16,11 @@ library(reshape2)
 require(bit64)
 
 #delete extant files
-lapply(1:10, function(x) unlink(paste0(main_dir, x), recursive=T))
+lapply(1:iteration_count, function(x) unlink(paste0(main_dir, x), recursive=T))
 
 #make new files
-lapply(1:10, function(x){
-  lapply(1:10, function(y){
+lapply(1:iteration_count, function(x){
+  lapply(1:split_count, function(y){
     dir.create(paste0(main_dir, x, "/", y), recursive = T)
   })
 })
@@ -29,7 +29,7 @@ lapply(1:10, function(x){
 #load all data 
 load(paste0(main_dir, "/../prepped_data.rdata"))
 patients <- unique(surv$patient_id)
-split_size <- ceiling(length(patients)/10)
+split_size <- ceiling(length(patients)/split_count)
 
 summary <- data.table(iteration=numeric(), split=numeric(), type=character(), mar=numeric(), aids=numeric(), death=numeric()) 
 
@@ -37,13 +37,13 @@ summary <- data.table(iteration=numeric(), split=numeric(), type=character(), ma
 fulldata <- copy(surv)
 setkeyv(fulldata, "patient_id")
 
-for (iteration in 1:10){
+for (iteration in 1:iteration_count){
   print(paste("iteration", iteration))
   #split into ten groups of patients
   shuffled <- sample(patients)
   startval <- 1
   
-  for (split in 1:10){
+  for (split in 1:split_count){
     
     print(paste("split", split))
     endval <- split_size*split

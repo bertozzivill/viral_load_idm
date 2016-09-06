@@ -6,13 +6,14 @@ rm(list=ls())
 main_dir <- "C:/Users/abertozzivilla/Dropbox (IDM)/viral_load/cascade/data/validation/"
 validation <- T
 
+iteration_count <- 10
+split_count <- 5
+
 # prep cross validation
-#source("prep_cross_validation.r")
+source("prep_cross_validation.r")
 
 #run cross validation
 print("running imputation and models, finding rmse")
-iteration_count <- 10
-split_count <- 10
 
 for (iteration in 1:iteration_count){
   for (split in 1:split_count){
