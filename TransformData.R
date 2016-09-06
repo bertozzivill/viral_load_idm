@@ -2,7 +2,7 @@
 
 TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only=F, imputation_count=10, surv){
 
-  print("imputing")
+  #print("imputing")
   
   # if running with pre-1996 data only, drop everything post-1996
   if (pre_1996_only) surv <- surv[pre_1996==T] 
@@ -53,7 +53,7 @@ TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only
   imputed_aids <- amelia(x=aids_to_impute,cs="patient_id", m=imputation_count,p2s=0)
   
   ## modify some columns, etc
-  print(paste0("IMPUTATION: you have just run the imputation:", " | upper bound=", upper_bound," | debias=", debias," | pre_1996_only=",pre_1996_only))
+  #print(paste0("IMPUTATION: you have just run the imputation:", " | upper bound=", upper_bound," | debias=", debias," | pre_1996_only=",pre_1996_only))
 
   data<-imputed_data[['imputations']]
   aids_data <- imputed_aids[['imputations']]

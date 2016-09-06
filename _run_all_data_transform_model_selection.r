@@ -54,6 +54,7 @@ index.data.transform <- rbind(index.data.transform, observed.only.index)
 ## run imputations based on inputs from index.data.transform
 
 if (validation){ # we only ever want to impute on validation datasets now
+  print("Running imputation")
   source("TransformData.R")
   
   run=apply(index.data.transform,1,function(x) paste(x,collapse='-'))
@@ -131,7 +132,8 @@ data_transform_names <- data_transform_names[, list(Var2, imp=paste0("imp_count_
 data_transform_names <- apply(data_transform_names, 1, function(x) paste(x, collapse="-"))
 names(survival.model.output) <- data_transform_names
 
-if (!validation){
+if (validation){
+  print("calculating rmse")
  source("calculate_rmse.r")
 }else{
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means

@@ -21,7 +21,7 @@ library(reshape2)
  #load models  and data
   print("loading data")
   #load(paste0(main_dir, "survival_model_output.rdata"))
-  load(paste0(main_dir, "test_data.rdata"))
+  load(paste0(this_main_dir, "test_data.rdata"))
   
   #only need the events from test data
   test_data <- test_data[event_type!="mar"]
@@ -103,5 +103,5 @@ library(reshape2)
   
   #save this data!
   print("saving")
-  save(all_rmse, file=paste0(main_dir, "rmse.rdata"))
+  save(all_rmse, file=paste0(this_main_dir, "rmse.rdata"))
 

@@ -13,7 +13,7 @@ LinearSurvivalModel<-function(orig_data,
   ## Use this instead of orig_data so we can manipulate it without interfereing with the mapply.
   data <- copy(orig_data)
          
-  print(paste0("SURVIVAL: ","log normal survival with ",spvl_method, ", interaction type ", interaction_type, " and ", ifelse(include.age, "age", "no age")))
+  #print(paste0("SURVIVAL: ","log normal survival with ",spvl_method, ", interaction type ", interaction_type, " and ", ifelse(include.age, "age", "no age")))
   
   # if you have only spvl or age (but not both), make sure interaction_type is none
   if (interaction_type!="none" & (spvl_method=="none" | include.age==F)){
@@ -22,7 +22,7 @@ LinearSurvivalModel<-function(orig_data,
   
   ## Define age, based on age_type above
   if (include.age & age.type!="cont"){
-    print(paste("binning age using type", age.type))
+    #print(paste("binning age using type", age.type))
     setnames(data, "agesero", "agesero_cont")
     
     if (age.type=="bin_10"){
@@ -47,7 +47,7 @@ LinearSurvivalModel<-function(orig_data,
     model_formula <- paste("observed_survival ~ (agesero +", spvl_method, "+ event_num)^3")
   }
   
-  print(model_formula)
+  #print(model_formula)
 
   ###evaluate model
   output <- lm(as.formula(model_formula), data=data)
