@@ -28,9 +28,9 @@ LinearSurvivalModel<-function(orig_data,
     if (age.type=="bin_10"){
       #print(summary(data))
       data[, agesero:= cut(agesero_cont, breaks=c(15, 25, 35, 45, Inf), labels=c("15-25", "25-35", "35-45", "45+"))]
-    }else if (age.type=="quint"){
-      # the values for the breaks here correspond to quintiles of the original dataset
-      data[, agesero:= cut(agesero_cont, breaks=age_quints, labels=c("quint_1", "quint_2", "quint_3", "quint_4", "quint_5"))]
+    }else if (age.type=="quart"){
+      # the values for the breaks here correspond to quartiles of the original dataset
+      data[, agesero:= cut(agesero_cont, breaks=age_quarts, labels=c("quart_1", "quart_2", "quart_3", "quart_4"))]
     }else{
       print(paste("unrecognized age type", age.type))
     }

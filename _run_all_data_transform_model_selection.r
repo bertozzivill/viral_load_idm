@@ -86,7 +86,7 @@ index.survival.models<-expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
   include.age=T,
-  age.type= c("cont", "bin_10", "quint"))
+  age.type= c("cont", "bin_10", "quart"))
 
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
 
@@ -94,7 +94,7 @@ age.only <- expand.grid(
   spvl_method="none",
   interaction_type="none",
   include.age=T,
-  age.type= c("cont", "bin_10", "quint"))
+  age.type= c("cont", "bin_10", "quart"))
 
 spvl.only <- expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),

@@ -30,8 +30,8 @@ library(reshape2)
   #generate uniquely-names columns for each type of age used (continuous, binned, etc)
   setnames(test_data, "agesero", "agesero_cont")
   test_data[, agesero_bin_10:= cut(agesero_cont, breaks=c(15, 25, 35, 45, Inf), labels=c("15-25", "25-35", "35-45", "45+"))]
-  # the values for the breaks here correspond to quintiles of the original dataset
-  test_data[, agesero_quint:= cut(agesero_cont, breaks=age_quints, labels=c("quint_1", "quint_2", "quint_3", "quint_4", "quint_5"))]
+  # the values for the breaks here correspond to quartiles of the original dataset
+  test_data[, agesero_quart:= cut(agesero_cont, breaks=age_quarts, labels=c("quart_1", "quart_2", "quart_3", "quart_4", "quart_5"))]
   test_data[, agesero_none:= agesero_cont]
   
   ##build rmse framework
