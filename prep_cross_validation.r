@@ -67,3 +67,4 @@ for (iteration in 1:iteration_count){
   }
 }
 
+rm(thisdata); gc
