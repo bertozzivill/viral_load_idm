@@ -21,14 +21,8 @@ library(stringr)
 library(Rmisc)
 library(xtable)
 
-#automatically finds correct directory name so we can stop commenting and uncommenting lines
-dir.exists <- function(d) {
-  de <- file.info(d)$isdir
-  ifelse(is.na(de), FALSE, de)
-}
-root_dir <- ifelse(dir.exists("/home/cselinger/"), "/home/cselinger/HIV-Cascade/merge/data/", "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
-main_dir <- ifelse(length(commandArgs())>2, commandArgs()[3], root_dir)
 
+main_dir <- "C:/Users/abertozzivilla/Dropbox (IDM)/viral_load/cascade/data/"
 
 ##---------------------------
 ## Load data
@@ -54,7 +48,7 @@ if (compute_summary){
   for (transform_imp in names(survival.model.output)){
     print(transform_imp)
     
-    #find data transform and imputation county
+    #find data transform and imputation count
     pattern <- "(.*)-imp_count_([0-9]*)"
     pattern_match <- str_match(transform_imp, pattern)
     data_transform <- pattern_match[1,2]
@@ -108,58 +102,42 @@ if (compute_summary){
   
   #merge means and variances to get a full summary of results
   summary.survival.model.summaries <- merge(mean.survival.model.summaries, variance.survival.model.summaries, by=by_names, all=T)
-  
+
   ##-------------------------------
   ## Load and merge error metrics
   ##-------------------------------
   
-  # # get rubin error
-  # load(paste0(main_dir, "rubin_method_error.rdata"))
-  # mean_rubin <- data.frame(mean.rubin.method.error)
-  # setnames(mean_rubin, names(mean.rubin.method.error))
-  # mean_rubin$data_transform <- rownames(mean_rubin)
-  # mean_rubin <- data.table(melt(mean_rubin, id.vars="data_transform", variable.name="model_spec", value.name="mean_rubin_error"))
-  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, mean_rubin, by=c("data_transform", "model_spec"), all=T)
+  # # get RMSE from OOS file
+  # load(paste0(main_dir, "compiled_rmse.rdata"))
+  # oos_rmse <- data.frame(compiled_rmse)
+  # setnames(oos_rmse, colnames(compiled_rmse))
+  # oos_rmse$data_transform <- rownames(oos_rmse)
+  # oos_rmse <- data.table(melt(oos_rmse, id.vars="data_transform", variable.name="model_spec", value.name="oos_rmse"))
+  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, oos_rmse, by=c("data_transform", "model_spec"), all=T)
   # 
-  # # get AIC
-  # load(paste0(main_dir, "AIC.rdata"))
-  # mean_aic <- data.frame(meanAIC)
-  # setnames(mean_aic, names(meanAIC))
-  # mean_aic$data_transform <- rownames(mean_aic)
-  # mean_aic <- data.table(melt(mean_aic, id.vars="data_transform", variable.name="model_spec", value.name="mean_aic"))
-  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, mean_aic, by=c("data_transform", "model_spec"), all=T)
   # 
-  
-  # get RMSE from OOS file
-  load(paste0(main_dir, "compiled_rmse.rdata"))
-  oos_rmse <- data.frame(compiled_rmse)
-  setnames(oos_rmse, colnames(compiled_rmse))
-  oos_rmse$data_transform <- rownames(oos_rmse)
-  oos_rmse <- data.table(melt(oos_rmse, id.vars="data_transform", variable.name="model_spec", value.name="oos_rmse"))
-  summary.survival.model.summaries <- merge(summary.survival.model.summaries, oos_rmse, by=c("data_transform", "model_spec"), all=T)
-  
-  
   #get ranking as per RMSE
-  ranking <- unique(summary.survival.model.summaries[order(oos_rmse), list(data_transform, model_spec, oos_rmse)])
-  ranking[, ranking:= as.numeric(rownames(ranking))]
-  summary.survival.model.summaries <- merge(summary.survival.model.summaries, ranking, by=c("data_transform", "model_spec", "oos_rmse"), all=T)
-  summary.survival.model.summaries <- summary.survival.model.summaries[order(ranking, data_transform, model_spec)]
-  summary.survival.model.summaries[, lower:= beta-1.96*se]
-  summary.survival.model.summaries[, upper:= beta+1.96*se]
+  # ranking <- unique(summary.survival.model.summaries[order(oos_rmse), list(data_transform, model_spec, oos_rmse)])
+  # ranking[, ranking:= as.numeric(rownames(ranking))]
+  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, ranking, by=c("data_transform", "model_spec", "oos_rmse"), all=T)
+  # summary.survival.model.summaries <- summary.survival.model.summaries[order(ranking, data_transform, model_spec)]
+
+  ## summary stats
+  
+  summary.survival.model.summaries[,lower:= beta-1.96*se]
+  summary.survival.model.summaries[,upper:=beta+1.96*se]
+  summary.survival.model.summaries[, effect_mean:=1-exp(beta)]
+  summary.survival.model.summaries[, effect_lower:= 1-exp(lower)]
+  summary.survival.model.summaries[, effect_upper:= 1-exp(upper)]
   
   save(summary.survival.model.summaries, file=paste0(main_dir, "all_model_summaries.rdata"))
 
 }else{
   load(paste0(main_dir, "all_model_summaries.rdata"))
-  ranking <- unique(summary.survival.model.summaries[order(oos_rmse), list(data_transform, model_spec, oos_rmse)])
+  #ranking <- unique(summary.survival.model.summaries[order(oos_rmse), list(data_transform, model_spec, oos_rmse)])
+  ranking <- unique(summary.survival.model.summaries[,list(data_transform, model_spec)])
   ranking[, ranking:= as.numeric(rownames(ranking))]
 }
-
-summary.survival.model.summaries[,lower:= beta-1.96*se]
-summary.survival.model.summaries[,upper:=beta+1.96*se]
-summary.survival.model.summaries[, effect_mean:=1-exp(beta)]
-summary.survival.model.summaries[, effect_lower:= 1-exp(lower)]
-summary.survival.model.summaries[, effect_upper:= 1-exp(upper)]
 
 
 ##-----------------------------------------------
@@ -175,11 +153,11 @@ data_list <- lapply(colnames(data.for.survival), function(col){
   if ("event_time_debiased" %in% names(this_transform)) setnames(this_transform, "event_time_debiased", "event_time")
   this_transform <- this_transform[, list(event_time=mean(event_time), agesero=mean(agesero), 
                                           observed_survival=mean(observed_survival), spvl_model=mean(spvl_model),
-                                          spvl_fraser=mean(spvl_fraser), event_num=mean(event_num)), by="patient_id"]
+                                          spvl_fraser=mean(spvl_fraser), event_num=unique(event_num)), by="patient_id"]
   
 })
 names(data_list) <- colnames(data.for.survival)
-
+save(data_list, file=paste0(main_dir, "mean_imputed_data.rdata"))
 
 ##-------------------------------
 ## Visualize
@@ -203,14 +181,17 @@ return(describe_transform)
 
 name_spec <- function(this_spec){
   this_spec <- as.list(strsplit(this_spec, split="-")[[1]])
-  names(this_spec) <- c("spvl_method", "interaction_type", "include.age")
+  names(this_spec) <- c("spvl_method", "interaction_type", "include.age", "age.type")
   
   spvl_type <- ifelse(this_spec$spvl_method=="none", "none", ifelse(this_spec$spvl_method=="spvl_model", "Nonlinear", "Geometric"))
   interaction_type <- ifelse(this_spec$interaction_type=="none", "none",
                              ifelse(this_spec$interaction_type=="two_way", "Two Way", "Three Way"))
   include_age <- ifelse(this_spec$include.age=="FALSE", F, T)
+  age_type <- ifelse(this_spec$age.type=="cont", "Continuous Age",
+                     ifelse(this_spec$age.type=="bin_10", "10yr Age Bins",
+                            ifelse(this_spec$age.type=="quint", "Age Quintiles", "No Age")))
   
-  describe_spec <- data.table(spvl_type=spvl_type, interaction_type=interaction_type, include_age=include_age)
+  describe_spec <- data.table(spvl_type=spvl_type, interaction_type=interaction_type, include_age=include_age, age_type=age_type)
   
   return(describe_spec)
 
@@ -228,46 +209,47 @@ ranking[, imp_ub:= ifelse(imp_ub=="none", "none",
                                  ifelse(imp_ub=="3", "20", "22")))]
 
 ranking[, full_transform:= paste0(time, "-", bias_type, "-", imp_type,   ifelse(imp_ub=="none", "", paste0("-UB ", imp_ub)))]
+
 ranking[, full_spec:= ifelse(spvl_type=="none" & include_age==F, "Null",
-                             ifelse(spvl_type=="none" & include_age==T, "Age Only",
+                             ifelse(spvl_type=="none" & include_age==T, paste(age_type, "Only"),
                                     paste0(spvl_type, "-", ifelse(include_age==F, "SPVL Only", 
                                                                   ifelse(interaction_type=="none", "Central", interaction_type)))))]
 
 ###heatmap of data tranforms and model specs, with color=rmse
 
-for_heatmap <- copy(ranking)
+# for_heatmap <- copy(ranking)
+# 
+# setnames(for_heatmap, c("oos_rmse", "ranking"), c("RMSE", "Ranking"))
+# for_heatmap[imp_ub=="none", imp_ub:="0"] #so ranking works
+# for_heatmap <- for_heatmap[order(-time, -bias_type, -imp_type, imp_ub)]
+# 
+# for_heatmap[, full_transform:= factor(full_transform, levels=rev(unique(for_heatmap$full_transform)))]
+# 
+# for_heatmap[, full_spec:= factor(full_spec, levels=c( "Null", "Age Only", "Geometric-SPVL Only", "Geometric-Central", "Geometric-Two Way", "Geometric-Three Way",
+#                                                       "Nonlinear-SPVL Only", "Nonlinear-Central",  "Nonlinear-Two Way", "Nonlinear-Three Way"))]
+# 
+# pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=11, height=9)
+# 
+# heatmap <- ggplot(for_heatmap, aes(x=full_spec, y=full_transform)) +
+#             geom_tile(aes(fill=RMSE)) +
+#             geom_text(color="grey", aes(fill = RMSE, label = paste0(round(RMSE, 2), "\n", "(", Ranking, ")" ))) +
+#             scale_fill_gradient(low = "blue", high = "red") +
+#             theme(axis.text.x=element_text(angle = 45, hjust=1))+
+#             labs(title="RMSE by Data Transform and Model Specification",
+#                  y="Data Transform",
+#                  x="Model Specification")
+# 
+# print(heatmap)
+# 
+# graphics.off()
 
-setnames(for_heatmap, c("oos_rmse", "ranking"), c("RMSE", "Ranking"))
-for_heatmap[imp_ub=="none", imp_ub:="0"] #so ranking works
-for_heatmap <- for_heatmap[order(-time, -bias_type, -imp_type, imp_ub)]
 
-for_heatmap[, full_transform:= factor(full_transform, levels=rev(unique(for_heatmap$full_transform)))]
-
-for_heatmap[, full_spec:= factor(full_spec, levels=c( "Null", "Age Only", "Geometric-SPVL Only", "Geometric-Central", "Geometric-Two Way", "Geometric-Three Way",
-                                                      "Nonlinear-SPVL Only", "Nonlinear-Central",  "Nonlinear-Two Way", "Nonlinear-Three Way"))]
-
-pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=11, height=9)
-
-heatmap <- ggplot(for_heatmap, aes(x=full_spec, y=full_transform)) +
-            geom_tile(aes(fill=RMSE)) +
-            geom_text(color="grey", aes(fill = RMSE, label = paste0(round(RMSE, 2), "\n", "(", Ranking, ")" ))) +
-            scale_fill_gradient(low = "blue", high = "red") +
-            theme(axis.text.x=element_text(angle = 45, hjust=1))+
-            labs(title="RMSE by Data Transform and Model Specification",
-                 y="Data Transform",
-                 x="Model Specification")
-
-print(heatmap)
-
-graphics.off()
-
-
-##find mean RMSE's over each possible type of action
-summary_rmse <- melt(ranking, id.vars=c("ranking", "oos_rmse"), measure.vars=c("imp_type", "time", "bias_type", "imp_ub",
-                                                                             "spvl_type", "interaction_type", "include_age"))
-summary_rmse[, type:= ifelse(variable %in% c("imp_type", "time", "bias_type", "imp_ub"), "data_transform", "model_spec")]
-summary_rmse[, mean_rmse:= mean(oos_rmse), by=c("variable", "value")]
-unique(summary_rmse[, list(type, variable, value, mean_rmse)])
+# ##find mean RMSE's over each possible type of action
+# summary_rmse <- melt(ranking, id.vars=c("ranking", "oos_rmse"), measure.vars=c("imp_type", "time", "bias_type", "imp_ub",
+#                                                                              "spvl_type", "interaction_type", "include_age"))
+# summary_rmse[, type:= ifelse(variable %in% c("imp_type", "time", "bias_type", "imp_ub"), "data_transform", "model_spec")]
+# summary_rmse[, mean_rmse:= mean(oos_rmse), by=c("variable", "value")]
+# unique(summary_rmse[, list(type, variable, value, mean_rmse)])
 
 
 ##line plots of predicted results and data
