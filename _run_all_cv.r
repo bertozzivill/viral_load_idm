@@ -9,9 +9,6 @@ validation <- T
 iteration_count <- 10
 split_count <- 5
 
-#age_quints <- c(15.4, 28.2, 41, 53.8, 66.6, Inf)
-age_quarts <- c(0, 30.4, 40.3, 50.2, Inf)
-
 # prep cross validation
 source("prep_cross_validation.r")
 

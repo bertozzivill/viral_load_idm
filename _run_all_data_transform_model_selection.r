@@ -29,6 +29,10 @@ if (!(exists("validation") & validation==T)) { validation <- F}
 this_main_dir <- ifelse(validation, paste0(main_dir, iteration, "/", split, "/"), # if validation==T, variables called "iteration" and "split" should also exist
                         "C:/Users/abertozzivilla/Dropbox (IDM)/viral_load/cascade/data/")
 
+#set age quintile cutoffs
+age_quints <- c(15.4, 28.2, 41, 53.8, 66.6, Inf)
+#age_quarts <- c(0, 30.4, 40.3, 50.2, Inf)
+
 #load data
 load(paste0(this_main_dir, "prepped_data.rdata"))
 setnames(surv, "event_timeNew", "event_time_debiased")
@@ -46,7 +50,7 @@ index.data.transform<-expand.grid(upper_bound=c(2.9, 3.0, 3.1),
                                  pre_1996_only=c(F,T),
                                  observed_only=c(F))
 observed.only.index <- expand.grid(upper_bound=c(2.9), 
-                                   debias=c(T,F),
+                                   debias=c(F,T),
                                    pre_1996_only=c(F,T),
                                    observed_only=c(T))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
@@ -86,7 +90,7 @@ index.survival.models<-expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
   include.age=T,
-  age.type= c("cont", "bin_10", "quart"))
+  age.type= c("cont", "bin_10", "quint"))
 
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
 
@@ -94,7 +98,7 @@ age.only <- expand.grid(
   spvl_method="none",
   interaction_type="none",
   include.age=T,
-  age.type= c("cont", "bin_10", "quart"))
+  age.type= c("cont", "bin_10", "quint"))
 
 spvl.only <- expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
