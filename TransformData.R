@@ -1,8 +1,8 @@
 
 
-TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only=F, imputation_count=10, surv){
+TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only=F, imputation_count=10, age_type="cont", surv){
 
-  #print("imputing")
+  print("imputing")
   
   # if running with pre-1996 data only, drop everything post-1996
   if (pre_1996_only) surv <- surv[pre_1996==T] 
@@ -14,6 +14,19 @@ TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only
   surv[, event_num:=ifelse(event_type=="mar", NA, ifelse(event_type=="death", 0, 1))] #need to impute event type as well as time now
   surv[, observed_survival:= ifelse(is.na(event_num), NA, log_event_time)]  # equals observed time to AIDS/death if available, NA otherwise 
   
+  # Configure age
+  if (age_type!="cont"){
+    if (age_type=="bin_10"){
+      #print(summary(data))
+      surv[, agesero:= cut(agesero, breaks=c(15, 25, 35, 45, Inf), labels=c("15-25", "25-35", "35-45", "45+"))]
+    }else if (age_type=="quint"){
+      # the values for the breaks here correspond to quintiles of the original dataset
+      surv[, agesero:= cut(agesero, breaks=age_quints, labels=c("quint_1", "quint_2", "quint_3", "quint_4", "quint_5"))]
+    }else{
+      print(paste("unrecognized age type", age_type))
+    }
+  }
+
   # if running with observed events only, remove all mar events and return a list of the same format as the imputed datase
   if (observed_only){
     surv <- surv[event_type!="mar", list(patient_id, event_time, agesero ,observed_survival, event_num, spvl_model,spvl_fraser)]
@@ -40,6 +53,8 @@ TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only
   col_of_interest <- which(colnames(to_impute)=="observed_survival")
   surv_len <- nrow(to_impute)
   
+  print(paste0("IMPUTATION:", " | upper bound=", upper_bound," | debias=", debias," | pre_1996_only=",pre_1996_only, "| age_type=", age_type))
+  
   #set bounds
   surv_bds <- matrix(c(1:surv_len, #row
                        rep(col_of_interest, surv_len), #column
@@ -49,11 +64,11 @@ TransformData<-function(upper_bound=3.2,debias=T, pre_1996_only=F, observed_only
   ), 
   nrow=surv_len,
   ncol=5)
-  imputed_data <- amelia(x=to_impute,cs='patient_id', priors=surv_bds, m=imputation_count,p2s=0)
-  imputed_aids <- amelia(x=aids_to_impute,cs="patient_id", m=imputation_count,p2s=0)
+  if (class(to_impute$agesero)=="factor") ords <- c("agesero") else ords <- NULL
+  imputed_data <- amelia(x=to_impute,cs='patient_id', priors=surv_bds, m=imputation_count,p2s=0, ords=ords)
+  imputed_aids <- amelia(x=aids_to_impute,cs="patient_id", m=imputation_count,p2s=0, ords=ords)
   
   ## modify some columns, etc
-  #print(paste0("IMPUTATION: you have just run the imputation:", " | upper bound=", upper_bound," | debias=", debias," | pre_1996_only=",pre_1996_only))
 
   data<-imputed_data[['imputations']]
   aids_data <- imputed_aids[['imputations']]

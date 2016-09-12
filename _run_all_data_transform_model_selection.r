@@ -23,7 +23,7 @@ library(Amelia)
 
 ## is this a validation run? if yes, a variable called "validation" should exist, and it should be TRUE.
 ## otherwise, set "validation" to F
-if (!(exists("validation") & validation==T)) { validation <- F}
+if (!(exists("validation"))) { validation <- F}
 
 #set main directory
 this_main_dir <- ifelse(validation, paste0(main_dir, iteration, "/", split, "/"), # if validation==T, variables called "iteration" and "split" should also exist
@@ -48,16 +48,19 @@ imputation_count <- 10
 index.data.transform<-expand.grid(upper_bound=c(2.9, 3.0, 3.1),
                                  debias=c(F,T),
                                  pre_1996_only=c(F,T),
-                                 observed_only=c(F))
+                                 observed_only=c(F),
+                                 age_type=c("cont", "bin_10", "quint"))
 observed.only.index <- expand.grid(upper_bound=c(2.9), 
                                    debias=c(F,T),
                                    pre_1996_only=c(F,T),
-                                   observed_only=c(T))
+                                   observed_only=c(T),
+                                   age_type=c("cont", "bin_10", "quint"))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
 ## run imputations based on inputs from index.data.transform
+run_imputation <- T
 
-if (validation){ # we only ever want to impute on validation datasets now
+if (run_imputation){ # we only ever want to impute on validation datasets now
   print("Running imputation")
   source("TransformData.R")
   
@@ -68,14 +71,14 @@ if (validation){ # we only ever want to impute on validation datasets now
                             debias=index.data.transform$debias,
                             pre_1996_only=index.data.transform$pre_1996_only,
                             observed_only=index.data.transform$observed_only,
+                            age_type=index.data.transform$age_type,
                             MoreArgs=list(surv=surv)
   )
   
   rownames(data.for.survival)<-paste0("imputation_number=",c(1:imputation_count))
   colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
   
-  ## ONLY uncomment this if you intend to overwrite the imputed dataset that was used for paper publication (not recommended!)
-  #save(data.for.survival, index.data.transform, file=paste0(this_main_dir, "imputed_survival_data.rdata"))  
+  save(data.for.survival, index.data.transform, file=paste0(this_main_dir, "imputed_survival_data.rdata"))  
 }else{
   load(file=paste0(this_main_dir,"imputed_survival_data.rdata"))
 }
@@ -89,8 +92,7 @@ if (validation){ # we only ever want to impute on validation datasets now
 index.survival.models<-expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type=c("none", "two_way", "three_way"),
-  include.age=T,
-  age.type= c("cont", "bin_10", "quint"))
+  include.age=T)
 
 index.survival.models$spvl_method<-as.character(index.survival.models$spvl_method)
 

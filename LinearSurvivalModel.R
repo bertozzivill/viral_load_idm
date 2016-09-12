@@ -20,22 +20,6 @@ LinearSurvivalModel<-function(orig_data,
     stop(paste("interaction type is", interaction_type, ", but spvl method is", spvl_method, "and age is", ifelse(include.age, "included", "not included")))
   }
   
-  ## Define age, based on age_type above
-  if (include.age & age.type!="cont"){
-    #print(paste("binning age using type", age.type))
-    setnames(data, "agesero", "agesero_cont")
-    
-    if (age.type=="bin_10"){
-      #print(summary(data))
-      data[, agesero:= cut(agesero_cont, breaks=c(15, 25, 35, 45, Inf), labels=c("15-25", "25-35", "35-45", "45+"))]
-    }else if (age.type=="quint"){
-      # the values for the breaks here correspond to quintiles of the original dataset
-      data[, agesero:= cut(agesero_cont, breaks=age_quints, labels=c("quint_1", "quint_2", "quint_3", "quint_4", "quint_5"))]
-    }else{
-      print(paste("unrecognized age type", age.type))
-    }
-  }
-  
   age_str <- ifelse(include.age, "agesero +", "")
   spvl_str <- ifelse(spvl_method=="none", "", paste0(spvl_method, ""))
   
