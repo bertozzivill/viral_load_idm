@@ -76,9 +76,14 @@ if (run_imputation){ # we only ever want to impute on validation datasets now
   )
   
   rownames(data.for.survival)<-paste0("imputation_number=",c(1:imputation_count))
-  colnames(data.for.survival)<-apply(index.data.transform,1,function(x)paste(x,collapse="-"))
+  colnames(data.for.survival)<-apply(index.data.transform,1,function(x){
+                                    name <- paste(x,collapse="-")
+                                    name <- gsub("FALSE", "0", name)
+                                    name <- gsub(" TRUE", "1", name)
+                                    return(name)
+    })
   
-  save(data.for.survival, index.data.transform, file=paste0(this_main_dir, "imputed_survival_data.rdata"))  
+  save(data.for.survival, index.data.transform, file=paste0(this_main_dir, "imputed_survival_data.rdata"))
 }else{
   load(file=paste0(this_main_dir,"imputed_survival_data.rdata"))
 }

@@ -151,7 +151,7 @@ data_list <- lapply(colnames(data.for.survival), function(col){
   this_transform <- data.for.survival[, col]
   this_transform <- rbindlist(this_transform)
   if ("event_time_debiased" %in% names(this_transform)) setnames(this_transform, "event_time_debiased", "event_time")
-  this_transform <- this_transform[, list(event_time=mean(event_time), agesero=mean(agesero), 
+  this_transform <- this_transform[, list(event_time=mean(event_time), agesero=unique(agesero), 
                                           observed_survival=mean(observed_survival), spvl_model=mean(spvl_model),
                                           spvl_fraser=mean(spvl_fraser), event_num=unique(event_num)), by="patient_id"]
   
