@@ -2,7 +2,6 @@ LinearSurvivalModel<-function(orig_data,
                               spvl_method='spvl_model',
                               interaction_type="none",
                               include.age=T,
-                              age.type="cont",
                               return.modelobject=T){
   
   

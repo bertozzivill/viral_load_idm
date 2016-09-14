@@ -58,7 +58,7 @@ observed.only.index <- expand.grid(upper_bound=c(2.9),
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
 ## run imputations based on inputs from index.data.transform
-run_imputation <- T
+run_imputation <- F
 
 if (run_imputation){ # we only ever want to impute on validation datasets now
   print("Running imputation")
@@ -104,14 +104,12 @@ index.survival.models$spvl_method<-as.character(index.survival.models$spvl_metho
 age.only <- expand.grid(
   spvl_method="none",
   interaction_type="none",
-  include.age=T,
-  age.type= c("cont", "bin_10", "quint"))
+  include.age=T)
 
 spvl.only <- expand.grid(
   spvl_method=paste0('spvl_',c('model','fraser')),
   interaction_type="none",
-  include.age=F,
-  age.type= "none")
+  include.age=F)
 
 null.model <- list("none", "none", F, "none")
 
@@ -131,7 +129,6 @@ for (k in 1:length(data.for.survival)){
                                      spvl_method=index.survival.models$spvl_method,
                                      interaction_type=index.survival.models$interaction_type,
                                      include.age=index.survival.models$include.age,
-                                     age.type=index.survival.models$age.type,
                                      MoreArgs=list(orig_data=orig_data))
   colnames(survival.model.output[[k]]) <- apply(index.survival.models,1, function(x) paste(x, collapse="-"))
 }
@@ -148,7 +145,7 @@ if (validation){
  source("calculate_rmse.r")
 }else{
   #save regression outputs for cross-validation, as well as the index values telling you what each list element means
-  print("saving imputed survival data")
+  print("saving modeled data")
   save(survival.model.output, index.survival.models, index.data.transform, file=paste0(this_main_dir, "survival_model_output.rdata"))
 }
 
