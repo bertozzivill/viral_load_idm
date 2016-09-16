@@ -39,7 +39,7 @@ load(paste0(main_dir, "prepped_data.rdata"))
 imputation_count <- 10
 model_spec_names <- apply(index.survival.models,1,function(x)paste(x, collapse="-"))
 
-compute_summary <- F
+compute_summary <- T
 
 if (compute_summary){
   survival.model.summaries<- NULL
@@ -52,6 +52,8 @@ if (compute_summary){
     pattern <- "(.*)-imp_count_([0-9]*)"
     pattern_match <- str_match(transform_imp, pattern)
     data_transform <- pattern_match[1,2]
+    # data_transform <- gsub("FALSE", "0", data_transform)
+    # data_transform <- gsub(" TRUE", "1", data_transform)
     imp_number <- as.numeric(pattern_match[1,3])
     
     this_transform<-survival.model.output[[transform_imp]]
@@ -107,20 +109,20 @@ if (compute_summary){
   ## Load and merge error metrics
   ##-------------------------------
   
-  # # get RMSE from OOS file
-  # load(paste0(main_dir, "compiled_rmse.rdata"))
-  # oos_rmse <- data.frame(compiled_rmse)
-  # setnames(oos_rmse, colnames(compiled_rmse))
-  # oos_rmse$data_transform <- rownames(oos_rmse)
-  # oos_rmse <- data.table(melt(oos_rmse, id.vars="data_transform", variable.name="model_spec", value.name="oos_rmse"))
-  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, oos_rmse, by=c("data_transform", "model_spec"), all=T)
-  # 
-  # 
-  #get ranking as per RMSE
-  # ranking <- unique(summary.survival.model.summaries[order(oos_rmse), list(data_transform, model_spec, oos_rmse)])
-  # ranking[, ranking:= as.numeric(rownames(ranking))]
-  # summary.survival.model.summaries <- merge(summary.survival.model.summaries, ranking, by=c("data_transform", "model_spec", "oos_rmse"), all=T)
-  # summary.survival.model.summaries <- summary.survival.model.summaries[order(ranking, data_transform, model_spec)]
+  # get RMSE from OOS file
+  load(paste0(main_dir, "validation/compiled_rmse.rdata"))
+  oos_rmse <- data.frame(compiled_rmse)
+  setnames(oos_rmse, colnames(compiled_rmse))
+  oos_rmse$data_transform <- rownames(oos_rmse)
+  oos_rmse <- data.table(melt(oos_rmse, id.vars="data_transform", variable.name="model_spec", value.name="oos_rmse"))
+  summary.survival.model.summaries <- merge(summary.survival.model.summaries, oos_rmse, by=c("data_transform", "model_spec"), all=T)
+
+
+  # get ranking as per RMSE
+  ranking <- unique(summary.survival.model.summaries[order(oos_rmse), list(data_transform, model_spec, oos_rmse)])
+  ranking[, ranking:= as.numeric(rownames(ranking))]
+  summary.survival.model.summaries <- merge(summary.survival.model.summaries, ranking, by=c("data_transform", "model_spec", "oos_rmse"), all=T)
+  summary.survival.model.summaries <- summary.survival.model.summaries[order(ranking, data_transform, model_spec)]
 
   ## summary stats
   

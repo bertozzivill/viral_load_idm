@@ -5,17 +5,12 @@ library(data.table)
 
 #load rmse results
 print("loading rmse")
-for (iteration in 1:iteration_count){
-  for (split in 1:split_count){
-    new_dir <-paste0(main_dir, iteration, "/", split, "/")
-    print(paste("iteration", iteration, "split", split))
-    load(paste0(new_dir, "rmse.rdata"))
-    apply(all_rmse, c(1,2), mean)
-  }
-}
 
-compiled_rmse <- lapply(1:10, function(iteration){
-      iteration_rmse <- lapply(1:10, function(split){
+# take mean of RMSE over splits
+compiled_rmse <- lapply(1:iteration_count, function(iteration){
+  
+      # mean over imputations
+      iteration_rmse <- lapply(1:split_count, function(split){
         new_dir <-paste0(main_dir, iteration, "/", split, "/")
         print(paste("iteration", iteration, "split", split))
         load(paste0(new_dir, "rmse.rdata"))
@@ -28,7 +23,7 @@ compiled_rmse <- lapply(1:10, function(iteration){
       return(iteration_rmse)
 })
 
-#take the mean of THIS list
+# take mean of RMSE over iterations
 compiled_count <- length(compiled_rmse)
 compiled_rmse <- Reduce("+", compiled_rmse) / compiled_count
 

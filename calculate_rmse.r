@@ -72,7 +72,7 @@ library(reshape2)
         #print(model_info)
         
         # create a column "agesero" corresponding to the appropriate age type
-        setnames(test_data, paste0("agesero_", model_info$age.type), "agesero")
+        setnames(test_data, paste0("agesero_", transform_info$age_type), "agesero")
         
         this_model <- this_imputation["lm", model_index][[1]]
         
@@ -95,7 +95,7 @@ library(reshape2)
         
         #clean up test_data: remove "predicted" column, revert agesero column back to more specific name
         test_data[, predicted:=NULL]
-        setnames(test_data, "agesero", paste0("agesero_", model_info$age.type))
+        setnames(test_data, "agesero", paste0("agesero_", transform_info$age_type))
         
         
       } #end model loop

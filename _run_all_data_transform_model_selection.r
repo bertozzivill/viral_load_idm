@@ -49,16 +49,16 @@ index.data.transform<-expand.grid(upper_bound=c(2.9, 3.0, 3.1),
                                  debias=c(F,T),
                                  pre_1996_only=c(F,T),
                                  observed_only=c(F),
-                                 age_type=c("cont", "bin_10", "quint"))
+                                 age_type=c("cont", "bin_10"))
 observed.only.index <- expand.grid(upper_bound=c(2.9), 
                                    debias=c(F,T),
                                    pre_1996_only=c(F,T),
                                    observed_only=c(T),
-                                   age_type=c("cont", "bin_10", "quint"))
+                                   age_type=c("cont", "bin_10"))
 index.data.transform <- rbind(index.data.transform, observed.only.index)
 
 ## run imputations based on inputs from index.data.transform
-run_imputation <- F
+run_imputation <- T
 
 if (run_imputation){ # we only ever want to impute on validation datasets now
   print("Running imputation")
