@@ -169,32 +169,31 @@ save(data_list, file=paste0(main_dir, "mean_imputed_data.rdata"))
 
 name_transform <- function(this_transform){
   this_transform <- as.list(strsplit(this_transform, split="-")[[1]])
-  names(this_transform) <- c("upper_bound", "debias", "pre_96", "no_impute")
+  names(this_transform) <- c("upper_bound", "debias", "pre_96", "no_impute", "age_type")
   
-  imp_type <- ifelse(this_transform$no_impute=="0", "Imputed", "Nonimputed")
-  time <- ifelse(this_transform$pre_96=="1", "Pre 1996", "Full Time")
-  bias_type <- ifelse(this_transform$debias=="1", "Debiased", "Nondebiased")
+  imp_type <- ifelse(this_transform$no_impute=="FALSE", "Imputed", "Nonimputed")
+  time <- ifelse(this_transform$pre_96==" TRUE", "Pre 1996", "Full Time")
+  bias_type <- ifelse(this_transform$debias==" TRUE", "Debiased", "Nondebiased")
   imp_ub <- ifelse(this_transform$upper_bound=="2.9" & this_transform$no_impute=="1", "none", this_transform$upper_bound)
+  age_type <- ifelse(this_transform$age_type=="cont", "Continuous Age",
+                     ifelse(this_transform$age_type=="bin_10", "10yr Age Bins",
+                            ifelse(this_transform$age_type=="quint", "Age Quintiles", "UNRECOGNIZED AGE")))
   
-  describe_transform <- data.table(imp_type=imp_type, time=time, bias_type=bias_type, imp_ub=imp_ub)
+  describe_transform <- data.table(imp_type=imp_type, time=time, bias_type=bias_type, imp_ub=imp_ub, age_type=age_type)
 
-return(describe_transform)
+  return(describe_transform)
 }
 
 name_spec <- function(this_spec){
   this_spec <- as.list(strsplit(this_spec, split="-")[[1]])
-  names(this_spec) <- c("spvl_method", "interaction_type", "include.age", "age.type")
+  names(this_spec) <- c("spvl_method", "interaction_type", "include.age")
   
   spvl_type <- ifelse(this_spec$spvl_method=="none", "none", ifelse(this_spec$spvl_method=="spvl_model", "Nonlinear", "Geometric"))
   interaction_type <- ifelse(this_spec$interaction_type=="none", "none",
                              ifelse(this_spec$interaction_type=="two_way", "Two Way", "Three Way"))
   include_age <- ifelse(this_spec$include.age=="FALSE", F, T)
-  age_type <- ifelse(this_spec$age.type=="cont", "Continuous Age",
-                     ifelse(this_spec$age.type=="bin_10", "10yr Age Bins",
-                            ifelse(this_spec$age.type=="quint", "Age Quintiles", "No Age")))
   
-  describe_spec <- data.table(spvl_type=spvl_type, interaction_type=interaction_type, include_age=include_age, age_type=age_type)
-  
+  describe_spec <- data.table(spvl_type=spvl_type, interaction_type=interaction_type, include_age=include_age)
   return(describe_spec)
 
 }
@@ -208,40 +207,41 @@ ranking <- merge(ranking, full_transform, by="ranking", all=T)
 ranking <- merge(ranking, full_spec, by="ranking", all=T)
 ranking[, imp_ub:= ifelse(imp_ub=="none", "none",
                           ifelse(imp_ub=="2.9", "18",
-                                 ifelse(imp_ub=="3", "20", "22")))]
-
-ranking[, full_transform:= paste0(time, "-", bias_type, "-", imp_type,   ifelse(imp_ub=="none", "", paste0("-UB ", imp_ub)))]
+                                 ifelse(imp_ub=="3.0", "20", "22")))]
 
 ranking[, full_spec:= ifelse(spvl_type=="none" & include_age==F, "Null",
-                             ifelse(spvl_type=="none" & include_age==T, paste(age_type, "Only"),
+                             ifelse(spvl_type=="none" & include_age==T, paste("Age Only"),
                                     paste0(spvl_type, "-", ifelse(include_age==F, "SPVL Only", 
                                                                   ifelse(interaction_type=="none", "Central", interaction_type)))))]
 
+ranking[, full_transform:= paste0(time, "-", bias_type, "-", imp_type,   ifelse(imp_ub=="none", "", paste0("-UB ", imp_ub)), "-", age_type)]
+
 ###heatmap of data tranforms and model specs, with color=rmse
 
-# for_heatmap <- copy(ranking)
-# 
-# setnames(for_heatmap, c("oos_rmse", "ranking"), c("RMSE", "Ranking"))
-# for_heatmap[imp_ub=="none", imp_ub:="0"] #so ranking works
-# for_heatmap <- for_heatmap[order(-time, -bias_type, -imp_type, imp_ub)]
-# 
-# for_heatmap[, full_transform:= factor(full_transform, levels=rev(unique(for_heatmap$full_transform)))]
-# 
-# for_heatmap[, full_spec:= factor(full_spec, levels=c( "Null", "Age Only", "Geometric-SPVL Only", "Geometric-Central", "Geometric-Two Way", "Geometric-Three Way",
-#                                                       "Nonlinear-SPVL Only", "Nonlinear-Central",  "Nonlinear-Two Way", "Nonlinear-Three Way"))]
-# 
-# pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=11, height=9)
-# 
-# heatmap <- ggplot(for_heatmap, aes(x=full_spec, y=full_transform)) +
-#             geom_tile(aes(fill=RMSE)) +
-#             geom_text(color="grey", aes(fill = RMSE, label = paste0(round(RMSE, 2), "\n", "(", Ranking, ")" ))) +
-#             scale_fill_gradient(low = "blue", high = "red") +
-#             theme(axis.text.x=element_text(angle = 45, hjust=1))+
-#             labs(title="RMSE by Data Transform and Model Specification",
-#                  y="Data Transform",
-#                  x="Model Specification")
-# 
-# print(heatmap)
+for_heatmap <- copy(ranking)
+
+setnames(for_heatmap, c("oos_rmse", "ranking"), c("RMSE", "Ranking"))
+for_heatmap[imp_ub=="none", imp_ub:="0"] #so ranking works
+for_heatmap <- for_heatmap[order(-time, -bias_type, -imp_type, imp_ub)]
+
+for_heatmap[, full_transform:= factor(full_transform, levels=rev(unique(for_heatmap$full_transform)))]
+
+for_heatmap[, full_spec:= factor(full_spec, levels=c( "Null", "Age Only", "Geometric-SPVL Only", "Geometric-Central", "Geometric-Two Way", "Geometric-Three Way",
+                                                      "Nonlinear-SPVL Only", "Nonlinear-Central",  "Nonlinear-Two Way", "Nonlinear-Three Way"))]
+
+#pdf("C:/Users/abertozz/Documents/work/classes/thesis_spring2016/paper_figures/heatmap.pdf", width=11, height=9)
+
+heatmap <- ggplot(for_heatmap, aes(x=full_spec, y=full_transform)) +
+            geom_tile(aes(fill=RMSE)) +
+            #geom_text(color="grey", aes(fill = RMSE, label = paste0(round(RMSE, 2), "\n", "(", Ranking, ")" ))) +
+            geom_text(color="grey", aes(fill = RMSE, label = paste0(round(RMSE, 2), " (", Ranking, ")" ))) +
+            scale_fill_gradient(low = "blue", high = "red") +
+            theme(axis.text.x=element_text(angle = 45, hjust=1))+
+            labs(title="RMSE by Data Transform and Model Specification",
+                 y="Data Transform",
+                 x="Model Specification")
+
+print(heatmap)
 # 
 # graphics.off()
 
