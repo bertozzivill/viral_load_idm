@@ -21,7 +21,7 @@ library(reshape2)
 library(ggplot2)
 require(bit64)
 
-main_dir <- ("C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/")
+main_dir <- ("C:/Users/abertozzivilla/Dropbox (IDM)/viral_load/cascade/data/")
 
 #################################################################
 # I. import data
@@ -184,11 +184,11 @@ data[seroconv_before_enroll==TRUE,event_timeNew:=event_time2]
 #  -- check how many are lost by restricting to 2+ observations
 ##########################################################################################
 
-alldata <- merge(data, viral, by="patient_id")
+alldata <- merge(data, viral, by="patient_id", all.x=T)
 
 #keep only those with at least 2 vl counts
 alldata[, vl_obs_count:=sum(!is.na(vl)), by="patient_id"]
-alldata <- alldata[vl_obs_count>1]
+#alldata <- alldata[vl_obs_count>1]
 
 alldata[, visit_time:= as.numeric((visit_date - serocon_date)/365)]
 

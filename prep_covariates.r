@@ -11,7 +11,7 @@ library(lme4)
 library(reshape2)
 library(Amelia)
 
-main_dir <- "C:/Users/abertozz/Dropbox (IDM)/viral_load/cascade/data/"
+main_dir <- "C:/Users/abertozzivilla/Dropbox (IDM)/viral_load/cascade/data/"
 #main_dir <- "C:/Users/cselinger/Dropbox (IDM)/viral_load (1)/cascade/data"
 #main_dir <- "/home/cselinger/HIV-Cascade/merge/data/"
 
