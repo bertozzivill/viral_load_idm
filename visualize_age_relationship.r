@@ -19,8 +19,6 @@ load(paste0(main_dir, "mean_imputed_data.rdata")) #imputed data
 
 pdf(paste0(main_dir, "age_plots.pdf"), width=12, height=7)
 
-censored <- surv[event_type=="mar", patient_id]
-
 name_transform <- function(transform_name){
   transform_name <- as.list(strsplit(transform_name, split="-")[[1]])
   names(transform_name) <- c("upper_bound", "debias", "pre_96", "no_impute", "age_type")
@@ -65,14 +63,14 @@ for (transform_name in unique(names(data_list))){
          x="Age Bin",
          y="log(Years to Event)")
 
-  box_quints <- ggplot(this_transform[[3]], aes(x=agesero, y=observed_survival)) +
-    geom_boxplot(aes(fill=event_type), alpha=0.7)+
-    theme(legend.position="none") +
-    labs(title="Age Quintiles",
-         x="Age Quintile",
-         y="log(Years to Event)")
+  # box_quints <- ggplot(this_transform[[3]], aes(x=agesero, y=observed_survival)) +
+  #   geom_boxplot(aes(fill=event_type), alpha=0.7)+
+  #   theme(legend.position="none") +
+  #   labs(title="Age Quintiles",
+  #        x="Age Quintile",
+  #        y="log(Years to Event)")
 
-  multiplot(scatter, box_10_yr, box_quints, cols=3)
+  multiplot(scatter, box_10_yr, cols=2)
 
 }
 
