@@ -93,6 +93,7 @@ viral[, visit_date:= as.Date(as.POSIXct(strptime(visit_date, format="%Y-%m-%d"),
 #  -- status other than 1 (homosexual) or 2=6 (heterosexua) transmission
 ##########################################################################################
 
+
 #convert strings into 'Date' objects
 # sometimes, for no reason I know of, dates get coded to 1911. The earliest date in this 
 # series should always be the patient's birth date; drop anything where this is not the case.
@@ -110,6 +111,12 @@ for (colname in names(data)){
 #calculate age at seroconversion
 data[, serocon_age:= as.numeric((serocon_date - birth_date)/365)]
 
+#drop those younger than 15
+data<- data[serocon_age>=15]
+
+#drop those with an infection mode other than 1 or 6
+data<- data[inf_mode==1 | inf_mode==6]
+
 ### Set up indicators for each event type; those for art, death, and AIDS are already in place. We need to remove impossible combinations
 ### and create indicators for loss to follow-up and administrative censoring
 data[, ltfu_indic:= ifelse(is.na(ltfu_date), 0, 1)]
@@ -123,41 +130,39 @@ data <- data[death_indic==0 | (death_indic==1 & !is.na(death_date))]
 data <- data[aids_indic==0 | (aids_indic==1 & !is.na(aids_date))] #also drops those with unknown aids status
 data <- data[ltfu_indic==0 | (ltfu_indic==1 & ltfu_date<=admin_censor_date)] #ltfu should never occur after administrative censoring
 
-#now, to sort out the timing of the dates. we start by determining the earlies mar date (art_start, ltfu, or admin_censor)
-data[, mar_date:=as.Date(pmin(art_start_date, ltfu_date, admin_censor_date, na.rm=T), origin="1970-01-01")]
-data[, event_type:=NA]
+#now, to sort out the timing of the dates. we start by determining the earlies mar date (ltfu, or admin_censor)
+data[, mar_date:=as.Date(pmin(ltfu_date, admin_censor_date, na.rm=T), origin="1970-01-01")]
 
-# if the mar date precedes aids and death, or there is no aids or death, use that.
-# if AIDS or death occurred before any MAR event, use that date.
-data[, event_type:=ifelse((mar_date<pmin(aids_date, death_date, na.rm=T)) | (aids_indic==0 & death_indic==0), "mar",
-                                 ifelse(aids_indic==1, "aids", "death"))]
+# if the mar date precedes art, aids, and death (or if there is no information about those things), event is MAR
+data[mar_date<pmin(aids_date, death_date, art_start_date, na.rm=T) | (aids_indic==0 & death_indic==0 & art_indic==0), event_type:="mar"]
+# if ART precedes MAR, AIDS, and death, event is ART. NOTE: sometimes ART is initated on the same day as AIDS diagnosis.
+# I count this as an ART event
+data[art_indic==1 & art_start_date<=pmin(aids_date, death_date, na.rm=T), event_type:="art"]
+# AIDS can be encoded into two different categories: an AIDS event followed by censorship or ART (no death), 
+# and an AIDS event followed by death, but with ART initiation in between.
+data[aids_indic==1 & death_indic==0 & art_indic==0, event_type:= "aids"]
+data[aids_indic==1 & death_indic==0 & art_indic==1 & aids_date<art_start_date, event_type:= "aids"]
+data[aids_indic==1 & death_indic==1 & art_indic==1 & aids_date<art_start_date & art_start_date<death_date, event_type:="aids"]
+# if death precedes ART or MAR, event is death 
+data[death_indic==1 & (death_date<art_start_date & is.na(art_start_date)), event_type:="death"]
+# finally, there are five individuals who have no ART and a death date logged after their "lost to follow-up" date. 
+# assume this is a recordkeeping error and count these people as deaths.
+data[death_indic==1 & art_indic==0 & death_date>mar_date, event_type:="death"]
+
+
+
+
+
+
 
 data[, event_date:= ifelse(event_type=="mar", mar_date,
-                                  ifelse(event_type=="aids", aids_date, death_date))]
+                                  ifelse(event_type=="art", art_start_date,
+                                         ifelse(event_type=="aids", aids_date, death_date)))]
 data[, event_date:=as.Date(event_date, origin="1970-01-01")]
-
-#drop those younger than 15
-data<- data[serocon_age>=15]
-
-#drop those with an infection mode other than 1 or 6
-data<- data[inf_mode==1 | inf_mode==6]
-
-# for individuals with both an AIDS and a death event, we want to assume the deaths were AIDS deaths and 
-# log their time-to-event as their time-to-death. To make sure this is a valid assumption (i.e. that people die
-# fairly soon after an AIDS diagnosis), we make a histogram of the time between aids and death.
-aids_death_subset <- unique(data[aids_indic==1 & death_indic==1 & art_indic==0, list(patient_id, aids_date, death_date)])
-aids_death_subset[, aids_death_time:=as.numeric((death_date-aids_date)/365)]
-histo <- ggplot(aids_death_subset, aes(x=aids_death_time)) +
-                geom_density(fill="black", alpha=0.7) +
-                labs(title="Time between AIDS and death, uncensord CASCADE patients",
-                     x="Time from AIDS to death, years")
-
-print(histo)
-
 
 #create event_type deathwithaids, assign to "death" with appropriate death data. note that this excludes individuals who go on treatment at any point.
 data[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
-#data[deathwithaids_indic==1 & as.numeric((death_date-aids_date)/365)>2, deathwithaids_indic:=0] #exclude aids-death times over 2 years
+
 data[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
 data[deathwithaids_indic==1, event_date:=death_date]
 
