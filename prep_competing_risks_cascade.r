@@ -133,96 +133,87 @@ data <- data[ltfu_indic==0 | (ltfu_indic==1 & ltfu_date<=admin_censor_date)] #lt
 #now, to sort out the timing of the dates. we start by determining the earlies mar date (ltfu, or admin_censor)
 data[, mar_date:=as.Date(pmin(ltfu_date, admin_censor_date, na.rm=T), origin="1970-01-01")]
 
-# if the mar date precedes art, aids, and death (or if there is no information about those things), event is MAR
-data[mar_date<pmin(aids_date, death_date, art_start_date, na.rm=T) | (aids_indic==0 & death_indic==0 & art_indic==0), event_type:="mar"]
-# if ART precedes MAR, AIDS, and death, event is ART. NOTE: sometimes ART is initated on the same day as AIDS diagnosis.
-# I count this as an ART event
-data[art_indic==1 & art_start_date<=pmin(aids_date, death_date, na.rm=T), event_type:="art"]
-# AIDS can be encoded into two different categories: an AIDS event followed by censorship or ART (no death), 
-# and an AIDS event followed by death, but with ART initiation in between.
-data[aids_indic==1 & death_indic==0 & art_indic==0, event_type:= "aids"]
-data[aids_indic==1 & death_indic==0 & art_indic==1 & aids_date<art_start_date, event_type:= "aids"]
-data[aids_indic==1 & death_indic==1 & art_indic==1 & aids_date<art_start_date & art_start_date<death_date, event_type:="aids"]
-# if death precedes ART or MAR, event is death 
-data[death_indic==1 & (death_date<art_start_date & is.na(art_start_date)), event_type:="death"]
-# finally, there are five individuals who have no ART and a death date logged after their "lost to follow-up" date. 
-# assume this is a recordkeeping error and count these people as deaths.
-data[death_indic==1 & art_indic==0 & death_date>mar_date, event_type:="death"]
+# think about determining event types as a decision tree: the first split is on whether or not the patient 
+# initiated ART
 
+## PATIENT INITIATED ART
+# If patient initiated ART and an AIDS event preceded ART, event is AIDS
+data[art_indic==1 & aids_indic==1 & aids_date<art_start_date, event_type:="aids"]
+# If ART precedes AIDS and/or death, or there is no logged AIDS/death event, event is ART
+data[art_indic==1 & (art_start_date<=pmin(aids_date, death_date, na.rm=T) | (aids_indic==0 & death_indic==0)), event_type:="art"]
 
+## PATIENT DID NOT INITIATE ART
+# In the absence of ART, the second split is on whether the patient had AIDS
 
+##    PATIENT HAD AIDS
+# If patient had AIDS and died, event type is death
+data[art_indic==0 & aids_indic==1 & death_indic==1, event_type:="death"]
+# If patient had AIDS and did not die, event type is AIDS
+data[art_indic==0 & aids_indic==1 & death_indic==0, event_type:="aids"]
 
-
-
+##    PATIENT DID NOT HAVE AIDS
+# If patient died, event type is death
+data[art_indic==0 & aids_indic==0 & death_indic==1, event_type:="death"]
+# If patient did not die, event type is MAR
+data[art_indic==0 & aids_indic==0 & death_indic==0, event_type:="mar"]
 
 data[, event_date:= ifelse(event_type=="mar", mar_date,
                                   ifelse(event_type=="art", art_start_date,
                                          ifelse(event_type=="aids", aids_date, death_date)))]
 data[, event_date:=as.Date(event_date, origin="1970-01-01")]
 
-#create event_type deathwithaids, assign to "death" with appropriate death data. note that this excludes individuals who go on treatment at any point.
-data[,deathwithaids_indic:=aids_indic*death_indic*as.numeric(!as.logical(art_indic))]
 
-data[deathwithaids_indic==1,event_type:='death']#lump deathwithaids and death into one endpoint
-data[deathwithaids_indic==1, event_date:=death_date]
+# calculate "event time" and debiased versions (to correct for survival bias)
+data[, event_time:= as.numeric((event_date - serocon_date)/365)] #original "event time": time from recorded seroconversion to event
+data[, bias:= as.numeric((enroll_date - serocon_date)/365)] # "bias" factor: time from recorded seroconversion to enrollment (if it's positive, it's "bias")
+data[, bias:= max(bias, 0), by=rownames(data)]
+data[, debiased_event_time:= event_time-bias] # "corrected" event time: time from enrollment to event
 
-data[, event_time0:= as.numeric((event_date - serocon_date)/365)] #original "event time": time from recorded seroconversion to event
-data[, event_time1:= as.numeric((enroll_date - serocon_date)/365)] # "bias" factor: time from recorded seroconversion to enrollment (if it's positive, it's "bias")
-data[, event_time2:= as.numeric((event_date - enroll_date)/365)] # "corrected" event time: time from enrollment to event
+## DROP INDIVIDUALS HERE: exclude patients who had an event before, or when they enrolled (e.g. enrolling in ART the same day as enrolment)
+data <- data[event_date>enroll_date]
+# Also exclude individuals who record an event prior to seroconversion (event_date<0)
+data <- data[event_time>0]
 
-#seroconversion before enrollment may bias for individuals with longer survival
-data[,bias:=max(event_time1,0),by=rownames(data)]
-data[,aids_before_enroll:=as.factor(enroll_date>aids_date)]
-data[,seroconv_before_enroll:=as.factor(enroll_date>serocon_date)]
-#alldata[,censoring_before_enroll:=as.factor(enroll_date>mar_date+0)]
+# Don't worry about viral load for now, just save this
+save(data, file=paste0(main_dir, "cox_model/surv_data.rdata"))
 
-data[,event_time:=event_time0]
-data[,event_timeNew:=event_time0]
+# Also save a cleaned version
+data <- data[, list(patient_id, sex, inf_mode, serocon_age, event_type, event_time, debiased_event_time)]
+save(data, file=paste0(main_dir, "cox_model/clean_data.rdata"))
 
-#removing bias: substract survival times between seroconv and enroll, if seroconv was before enroll
-data[seroconv_before_enroll==TRUE,event_timeNew:=event_time2]
 
-#########################################################################################
-# III. Merge vl and individual together
-#  -- check how many are lost in the merge
-#  -- check how many are lost by removing vl visits before serocon/after event
-#  -- check how many are lost by restricting to 2+ observations
-##########################################################################################
-
-alldata <- merge(data, viral, by="patient_id", all.x=T)
-
-#keep only those with at least 2 vl counts
-alldata[, vl_obs_count:=sum(!is.na(vl)), by="patient_id"]
-#alldata <- alldata[vl_obs_count>1]
-
-alldata[, visit_time:= as.numeric((visit_date - serocon_date)/365)]
-
-#drop visits prior to seroconversion, and subjects whose event date precedes their seroconversion date (or enrollment date, if serocon<enroll)
-# (i.e. they started art before their first visit)
-alldata <- alldata[visit_time>=0 & event_time>0 & event_timeNew>0]
-
-# drop visits after event
-alldata <- alldata[visit_date<event_date]
-
-#save full dataset
-save(alldata, file=paste0(main_dir,"alldata.rdata"))
-
-#################################################################
-# V. Split into relevant datasets, save
-#################################################################
-
-## viral load
-vl <- alldata[,list(patient_id, time=visit_time, vl, assay_ll, assay_type)]
-write.csv(vl, file=paste0(main_dir, "vl.csv"), row.names=F)
-
-## survival
-surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
-setkeyv(surv, NULL)
-surv <- unique(surv)
-write.csv(surv, file=paste0(main_dir, "surv.csv"), row.names=F)
-
-#################################################################
-# VI. Source code to prep covariates
-#################################################################
-
-source("prep_covariates.r")
+# #########################################################################################
+# # III. Merge vl and individual together
+# ##########################################################################################
+# 
+# alldata <- merge(data, viral, by="patient_id", all.x=T) #keep even those with no vl measurement
+# alldata[, visit_time:= as.numeric((visit_date - serocon_date)/365)]
+# 
+# #drop visits prior to seroconversion
+# alldata <- alldata[visit_time>=0 | is.na(visit_time)]
+# 
+# # drop visits after event
+# alldata <- alldata[visit_date<event_date | is.na(visit_date)]
+# 
+# #save full dataset
+# save(alldata, file=paste0(main_dir,"alldata.rdata"))
+# 
+# #################################################################
+# # V. Split into relevant datasets, save
+# #################################################################
+# 
+# ## viral load
+# vl <- alldata[,list(patient_id, time=visit_time, vl, assay_ll, assay_type)]
+# write.csv(vl, file=paste0(main_dir, "vl.csv"), row.names=F)
+# 
+# ## survival
+# surv <- alldata[, list(patient_id, event_type, event_time, event_timeNew, agesero=serocon_age,event_date,serocon_date,enroll_date,seroconv_before_enroll,aids_before_enroll,bias)]
+# setkeyv(surv, NULL)
+# surv <- unique(surv)
+# write.csv(surv, file=paste0(main_dir, "surv.csv"), row.names=F)
+# 
+# #################################################################
+# # VI. Source code to prep covariates
+# #################################################################
+# 
+# source("prep_covariates.r")
