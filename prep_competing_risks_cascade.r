@@ -174,11 +174,14 @@ data <- data[event_date>enroll_date]
 # Also exclude individuals who record an event prior to seroconversion (event_date<0)
 data <- data[event_time>0]
 
+## Create a pre-1996 indicator
+data[, pre_1996:= ifelse(event_date<as.Date("1996-01-01"), 1, 0)]
+
 # Don't worry about viral load for now, just save this
 save(data, file=paste0(main_dir, "cox_model/surv_data.rdata"))
 
 # Also save a cleaned version
-data <- data[, list(patient_id, sex, inf_mode, serocon_age, event_type, event_time, debiased_event_time)]
+data <- data[, list(patient_id, sex, inf_mode, serocon_age, event_type, event_time, debiased_event_time, pre_1996)]
 save(data, file=paste0(main_dir, "cox_model/clean_data.rdata"))
 
 
